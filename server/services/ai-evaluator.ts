@@ -1,6 +1,7 @@
 import { storage } from "../storage";
 import { aiService } from "./ai";
 import { marketDataService } from "./market_data";
+import { RankingEngine } from "./ranking-engine";
 import { config } from "../config";
 import type { InsertAiEvaluation } from "@shared/schema";
 
@@ -45,6 +46,11 @@ class AIEvaluator {
   private readonly MAX_CANDIDATES = 100;
   private readonly MIN_VOLUME_THRESHOLD = 1000000; // $1M daily volume
   private readonly MIN_MARKET_CAP = 10000000; // $10M market cap
+  private rankingEngine: RankingEngine;
+  
+  constructor() {
+    this.rankingEngine = new RankingEngine();
+  }
   
   async runEvaluation(userId?: string, runType: "scheduled" | "manual" = "manual"): Promise<void> {
     const evaluationId = crypto.randomUUID();
@@ -62,9 +68,9 @@ class AIEvaluator {
         error: null,
       });
       
-      // Fetch and prepare market data
-      const marketData = await this.fetchMarketData();
-      const features = this.prepareFeatures(marketData);
+      // Use ranking engine for sophisticated analysis
+      const rankedCoins = await this.rankingEngine.rankCoins(this.MAX_CANDIDATES);
+      const features = this.convertRankedToFeatures(rankedCoins);
       
       // Get user context if userId provided
       const userContext = userId ? await this.getUserContext(userId) : null;
@@ -103,6 +109,31 @@ class AIEvaluator {
       console.error("Failed to fetch market data:", error);
       throw new Error("Unable to fetch market data for evaluation");
     }
+  }
+  
+  private convertRankedToFeatures(rankedCoins: any[]): CoinFeatures[] {
+    return rankedCoins.map(coin => ({
+      id: coin.coinId,
+      symbol: coin.symbol,
+      name: coin.name,
+      price: coin.market.priceChange24h, // Current price from market data
+      marketCap: coin.market.marketCap,
+      volume24h: coin.market.volume24h,
+      priceChange24h: coin.market.priceChange24h,
+      priceChange7d: coin.market.priceChange7d,
+      priceChange30d: coin.market.priceChange30d,
+      volumeToMarketCap: coin.market.volume24h / coin.market.marketCap,
+      rank: rankedCoins.indexOf(coin) + 1,
+      score: coin.totalScore,
+      riskLevel: coin.risk.volatility30d < 30 ? "low" : coin.risk.volatility30d < 70 ? "medium" : "high",
+      // Additional sophisticated metrics
+      technicalScore: coin.technicalScore,
+      momentumScore: coin.momentumScore,
+      volatilityScore: coin.volatilityScore,
+      trend: coin.trend,
+      signals: coin.signals,
+      confidence: coin.confidence,
+    }));
   }
   
   private prepareFeatures(marketData: any[]): CoinFeatures[] {
@@ -201,11 +232,12 @@ class AIEvaluator {
     
     const userPrompt = `Analyze these ${features.length} cryptocurrencies and recommend a portfolio:
     
-    TOP CANDIDATES (by score):
+    TOP CANDIDATES (by sophisticated ranking):
     ${features.slice(0, 20).map(f => 
-      `${f.symbol.toUpperCase()}: Price $${f.price.toFixed(2)}, MCap $${(f.marketCap/1e9).toFixed(2)}B, ` +
-      `24h: ${f.priceChange24h.toFixed(1)}%, 7d: ${f.priceChange7d.toFixed(1)}%, ` +
-      `Vol/MCap: ${(f.volumeToMarketCap * 100).toFixed(1)}%, Risk: ${f.riskLevel}`
+      `${f.symbol.toUpperCase()}: Score ${f.score?.toFixed(1)}, MCap $${(f.marketCap/1e9).toFixed(2)}B, ` +
+      `Tech: ${(f as any).technicalScore?.toFixed(0)}, Momentum: ${(f as any).momentumScore?.toFixed(0)}, ` +
+      `Trend: ${(f as any).trend || 'neutral'}, Risk: ${f.riskLevel}, ` +
+      `Signals: ${((f as any).signals || []).slice(0, 2).join(', ')}`
     ).join('\n')}
     
     ${userContext ? `USER CONTEXT:
