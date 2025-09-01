@@ -90,7 +90,7 @@ export function Topbar({
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Categories</SelectItem>
+            <SelectItem value="all">All Categories</SelectItem>
             <SelectItem value="layer1">Layer 1</SelectItem>
             <SelectItem value="defi">DeFi</SelectItem>
             <SelectItem value="meme">Meme</SelectItem>
@@ -107,7 +107,7 @@ export function Topbar({
             <SelectValue placeholder="All Risk Buckets" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Risk Buckets</SelectItem>
+            <SelectItem value="all">All Risk Buckets</SelectItem>
             <SelectItem value="low">Low Risk</SelectItem>
             <SelectItem value="medium">Medium Risk</SelectItem>
             <SelectItem value="high">High Risk</SelectItem>

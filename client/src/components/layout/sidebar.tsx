@@ -79,20 +79,20 @@ export function Sidebar() {
           const isActive = location === item.href || location.startsWith(item.href + "/");
           
           return (
-            <Link key={item.href} href={item.href}>
-              <a 
-                className={cn(
-                  "nav-link",
-                  isActive && "nav-link-active"
-                )}
-                title={item.label}
-                data-testid={item.testId}
-              >
-                <Icon className={cn(
-                  "sidebar-icon",
-                  isActive && "text-primary"
-                )} />
-              </a>
+            <Link 
+              key={item.href} 
+              href={item.href}
+              className={cn(
+                "nav-link",
+                isActive && "nav-link-active"
+              )}
+              title={item.label}
+              data-testid={item.testId}
+            >
+              <Icon className={cn(
+                "sidebar-icon",
+                isActive && "text-primary"
+              )} />
             </Link>
           );
         })}
