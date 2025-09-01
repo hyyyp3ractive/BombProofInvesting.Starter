@@ -85,13 +85,69 @@
   --danger: hsl(351, 83%, 61%);          /* #F43F5E rose-500 */
 }
 
-/* Optional soft background pattern for Flower Mode */
-:root[data-theme="flower"] body {
+/* Override legacy light/dark modes with data-theme */
+html[data-theme="midnight"],
+html[data-theme="flower"], 
+html[data-theme="cozy"],
+html[data-theme="high-contrast"] {
+  color-scheme: light; /* Reset color-scheme to prevent auto dark mode */
+}
+
+/* Ensure body background follows theme */
+html[data-theme="midnight"] body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+html[data-theme="flower"] body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
   background-image:
     radial-gradient(80px 80px at 20% 10%, hsla(330, 81%, 60%, 0.08), transparent),
     radial-gradient(100px 100px at 80% 30%, hsla(262, 83%, 58%, 0.08), transparent),
     radial-gradient(120px 120px at 30% 80%, hsla(142, 71%, 45%, 0.08), transparent);
   background-repeat: no-repeat;
+}
+
+html[data-theme="cozy"] body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+html[data-theme="high-contrast"] body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+/* Theme-specific font and styling overrides */
+html[data-theme="flower"] {
+  font-family: "Inter", "Segoe UI", -apple-system, sans-serif;
+}
+
+html[data-theme="flower"] * {
+  font-weight: 400;
+}
+
+html[data-theme="flower"] .font-bold {
+  font-weight: 600; /* Softer bold for flower mode */
+}
+
+html[data-theme="cozy"] {
+  font-family: "Inter", "Georgia", serif;
+}
+
+html[data-theme="high-contrast"] {
+  font-family: "Inter", monospace;
+  font-weight: 500; /* Slightly bolder for accessibility */
+}
+
+/* Force theme colors over legacy classes */
+html[data-theme] .light,
+html[data-theme] .dark,
+html[data-theme] .bg-background,
+html[data-theme] .text-foreground {
+  background: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
 }
 
 /* Cozy Mode - Warm and easy on the eyes */
