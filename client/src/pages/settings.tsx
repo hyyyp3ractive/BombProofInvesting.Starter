@@ -296,6 +296,21 @@ export default function Settings() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Dev Navigation */}
+            <div className="border-t pt-4">
+              <Label className="text-sm font-medium mb-3 block">Quick Navigation</Label>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => window.location.href = "/starter-portfolio"}
+                className="w-full justify-start"
+                data-testid="button-nav-starter-portfolio"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                AI Starter Portfolio Calculator
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
