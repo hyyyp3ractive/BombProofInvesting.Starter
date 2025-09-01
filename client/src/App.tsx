@@ -16,6 +16,7 @@ import Coins from "@/pages/coins";
 import Ratings from "@/pages/ratings";
 import Portfolio from "@/pages/portfolio";
 import DCA from "@/pages/dca";
+import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
@@ -53,6 +54,7 @@ function Router() {
       <Route path="/ratings" component={() => <ProtectedRoute component={Ratings} />} />
       <Route path="/portfolio" component={() => <ProtectedRoute component={Portfolio} />} />
       <Route path="/dca" component={() => <ProtectedRoute component={DCA} />} />
+      <Route path="/reports" component={() => <ProtectedRoute component={Reports} />} />
       <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
       
       {/* Fallback */}
