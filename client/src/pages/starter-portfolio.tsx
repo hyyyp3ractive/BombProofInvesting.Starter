@@ -542,50 +542,63 @@ export default function StarterPortfolio() {
               <p className="text-xs text-muted-foreground">
                 Pick a look that feels right for you - you can always change it later!
               </p>
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant={currentTheme === "midnight" ? "default" : "outline"}
-                  onClick={() => setCurrentTheme("midnight")}
-                  className="h-auto p-3 flex flex-col gap-1"
-                  data-testid="button-theme-midnight"
-                >
-                  <span className="text-lg">🌙</span>
-                  <span className="text-sm">Midnight</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant={currentTheme === "flower" ? "default" : "outline"}
-                  onClick={() => setCurrentTheme("flower")}
-                  className="h-auto p-3 flex flex-col gap-1"
-                  data-testid="button-theme-flower"
-                >
-                  <span className="text-lg">🌸</span>
-                  <span className="text-sm">Flower Mode</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant={currentTheme === "cozy" ? "default" : "outline"}
-                  onClick={() => setCurrentTheme("cozy")}
-                  className="h-auto p-3 flex flex-col gap-1"
-                  data-testid="button-theme-cozy"
-                >
-                  <span className="text-lg">☕</span>
-                  <span className="text-sm">Cozy</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant={currentTheme === "high-contrast" ? "default" : "outline"}
-                  onClick={() => setCurrentTheme("high-contrast")}
-                  className="h-auto p-3 flex flex-col gap-1"
-                  data-testid="button-theme-high-contrast"
-                >
-                  <span className="text-lg">♿</span>
-                  <span className="text-sm">High Contrast</span>
-                </Button>
-              </div>
+              <Select value={currentTheme} onValueChange={setCurrentTheme}>
+                <SelectTrigger className="bg-card border-border" data-testid="select-theme-intake">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  <SelectItem 
+                    value="midnight" 
+                    className="hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">🌙</span>
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">Midnight</span>
+                        <span className="text-xs text-muted-foreground">Dark professional theme</span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                  <SelectItem 
+                    value="flower" 
+                    className="hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">🌸</span>
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium text-pink-600 dark:text-pink-400">Flower Mode</span>
+                        <span className="text-xs text-pink-500 dark:text-pink-500">Warm & welcoming for beginners</span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                  <SelectItem 
+                    value="cozy" 
+                    className="hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">☕</span>
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium text-orange-600 dark:text-orange-400">Cozy</span>
+                        <span className="text-xs text-orange-500 dark:text-orange-500">Warm earth tones</span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                  <SelectItem 
+                    value="high-contrast" 
+                    className="hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">♿</span>
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium text-blue-600 dark:text-blue-400">High Contrast</span>
+                        <span className="text-xs text-blue-500 dark:text-blue-500">Enhanced accessibility</span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
               {currentTheme === "flower" && (
-                <div className="text-xs text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-900/20 p-2 rounded border">
+                <div className="text-xs text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-900/20 p-2 rounded border border-pink-200 dark:border-pink-800">
                   🌸 Perfect for new investors - warm and welcoming!
                 </div>
               )}
