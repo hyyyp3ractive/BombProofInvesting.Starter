@@ -1,0 +1,188 @@
+Replit Add-On Prompt — API Retrieval Layer for Crypto Evaluator
+
+COPY/PASTE THIS UNDER YOUR EXISTING REPLIT AI PROMPT.
+Instruct Ghostwriter to implement a production-grade market data layer using official REST APIs only (no scraping).
+
+TITLE: Add API Retrieval Layer (Coin Data)
+
+SCOPE: Implement a robust “market data layer” with clean adapters for CoinGecko (primary) and optional providers (Crypto.com Exchange public, CoinMarketCap, Messari). Use official REST APIs. Include retries, caching, normalization, and fallbacks.
+
+--------------------------------------------------------------------
+1) ENV & CONFIG
+--------------------------------------------------------------------
+Extend `.env.example` with:
+  COINGECKO_BASE_URL=https://api.coingecko.com/api/v3
+  COINGECKO_API_KEY=            # not required for public endpoints; support if present
+  COINMARKETCAP_BASE_URL=https://pro-api.coinmarketcap.com/v1
+  COINMARKETCAP_API_KEY=
+  MESSARI_BASE_URL=https://data.messari.io/api/v1
+  MESSARI_API_KEY=
+  CRYPTOCOM_BASE_URL=https://api.crypto.com/exchange/v1
+  CRYPTOCOM_API_KEY=
+  CRYPTOCOM_API_SECRET=
+
+  MARKET_REFRESH_SEC=300        # default 5 min refresh
+  HTTP_TIMEOUT_SEC=20
+  HTTP_MAX_RETRIES=4
+  CACHE_TTL_MARKETS_SEC=120
+  CACHE_TTL_COIN_SEC=600
+  CACHE_TTL_HISTORY_SEC=86400
+
+Add backend/core/config.py to read env vars with sane defaults.
+
+--------------------------------------------------------------------
+2) DATA ABSTRACTION (TYPED, TESTABLE)
+--------------------------------------------------------------------
+Create backend/services/providers/base.py defining a Protocol:
+  class MarketProvider(Protocol):
+      async def search(self, query: str, limit: int = 20) -> list[CoinSummary]: ...
+      async def markets(self, vs_currency: str = "usd", page: int = 1, per_page: int = 100) -> list[MarketRow]: ...
+      async def coin(self, coin_id: str) -> CoinDetail: ...
+      async def history(self, coin_id: str, vs_currency: str, days: int | str = 30) -> PriceSeries: ...
+
+Create Pydantic models in db/schemas.py for:
+  CoinSummary, MarketRow, CoinDetail, PriceSeries
+
+Implement adapters:
+  - backend/services/providers/coingecko.py (primary; httpx.AsyncClient)
+  - backend/services/providers/cryptocom_public.py (stub public tickers)
+  - backend/services/providers/cmc.py (CoinMarketCap; uses API key if present)
+  - backend/services/providers/messari.py (fundamentals/metrics if key present)
+
+--------------------------------------------------------------------
+3) HTTP CLIENT, RETRIES, CACHING
+--------------------------------------------------------------------
+- Use httpx.AsyncClient with exponential backoff + jitter on 429/5xx; respect Retry-After.
+- Per-host connection pooling; timeout from HTTP_TIMEOUT_SEC.
+- Pass API keys via headers when present.
+- Two-tier cache:
+    * In-memory LRU for hot reads (TTL via timestamp)
+    * SQLite table http_cache(key TEXT PRIMARY KEY, value JSON, expires_at INT)
+- Honor ETag/If-None-Match when providers send them; cache 304 results.
+- Provide utils/cache.py with cache_get, cache_put, ttl_ok helpers.
+
+--------------------------------------------------------------------
+4) FALLBACK AGGREGATOR
+--------------------------------------------------------------------
+Create backend/services/market_aggregator.py:
+  - Accept providers in priority order: [CoinGecko, CoinMarketCap, Crypto.com].
+  - Methods search/markets/coin/history: try primary → fallback on network/error/empty.
+  - Normalize outputs to shared Pydantic models.
+
+--------------------------------------------------------------------
+5) BACKGROUND REFRESH
+--------------------------------------------------------------------
+- APScheduler job every MARKET_REFRESH_SEC to pre-warm cache for:
+    * watchlist coin IDs
+    * top 50 by market cap (persist list on first run)
+- Jobs must be idempotent and rate-limit aware (batch requests with small delays).
+
+--------------------------------------------------------------------
+6) API ROUTES (WIRE TO EXISTING)
+--------------------------------------------------------------------
+Base: /api
+  GET  /coins/search?q=
+  GET  /coins/markets?vs_currency=usd&page=1&per_page=100
+  GET  /coins/{coin_id}
+  GET  /coins/{coin_id}/history?vs_currency=usd&days=30
+Each route:
+  - read from cache first
+  - call aggregator if miss/stale
+  - return normalized models
+
+--------------------------------------------------------------------
+7) ERROR HANDLING & TELEMETRY
+--------------------------------------------------------------------
+- Consistent error JSON: { "error": {"code":"PROVIDER_TIMEOUT","message":"..."} }
+- Log provider, URL, status, retry count, duration; never expose secrets.
+- Frontend-friendly messages.
+
+--------------------------------------------------------------------
+8) TESTS (pytest + respx)
+--------------------------------------------------------------------
+- Mock responses; verify:
+  * backoff on 429
+  * cache hit avoids network
+  * aggregator falls back when primary fails
+  * model validation for odd/missing fields
+  * history timestamps ascending
+
+--------------------------------------------------------------------
+9) NON-GOALS
+--------------------------------------------------------------------
+- No scraping, no headless browsers.
+- No private keys/trading in MVP.
+
+Deliverables: All files, passing tests, updated README with provider setup, and .env.example.
+
+====================================================================
+DEVELOPER SETUP — ACCOUNTS, KEYS, AND REPLIT SECRETS
+====================================================================
+
+MANDATORY FOR MVP (PUBLIC DATA)
+--------------------------------
+CoinGecko
+- Key required? No (public endpoints).
+- Actions: None required to run MVP.
+- Notes: Rate limits exist; app uses backoff + caching.
+
+OPTIONAL ENHANCEMENTS (ADD WHEN READY)
+--------------------------------------
+CoinMarketCap (CMC)
+- Why: Extra coverage + fallback when throttled.
+- Steps:
+  1) Create CoinMarketCap Developer account
+  2) Generate API key
+  3) In Replit → Tools → Secrets, add:
+       COINMARKETCAP_API_KEY=your_key
+  4) Enable provider in market_aggregator if key present
+
+Messari
+- Why: Fundamentals/research metrics
+- Steps:
+  1) Sign up at Messari
+  2) Create API key
+  3) Add to Replit Secrets:
+       MESSARI_API_KEY=your_key
+  4) Enable Messari adapter for fundamentals panel
+
+Crypto.com Exchange (Public / Read-Only)
+- Why: Public tickers fallback; later add balances (read-only)
+- Steps:
+  1) Create Crypto.com Exchange account (web, not mobile app)
+  2) In API Management, create READ-ONLY key (optionally IP allowlist)
+  3) Add to Replit Secrets:
+       CRYPTOCOM_API_KEY=your_key
+       CRYPTOCOM_API_SECRET=your_secret
+- Note: MVP uses public data only; no trading/balances yet
+
+OpenAI (Optional AI Summaries in-app)
+- Why: /ai/explain and /ai/compare endpoints
+- Steps:
+  1) Create OpenAI API key
+  2) Add to Replit Secrets:
+       OPENAI_API_KEY=your_key
+  3) Enable AI in app Settings
+
+REPLIT SECRETS — QUICK HOW-TO
+-----------------------------
+1) In your Replit, click Tools → Secrets (lock icon)
+2) Add each variable name/value exactly as documented
+3) Never commit keys to git; keep .env.example key-less
+
+LOCAL TESTING TIPS
+------------------
+- App should function WITHOUT any keys:
+    * search coins, load markets, coin details, history for DCA/backtests
+- To simulate rate-limits:
+    * set HTTP_MAX_RETRIES=1 and lower CACHE_TTL_* values during tests
+    * run pytest to verify fallback logic
+
+SAFETY & COMPLIANCE NOTES
+-------------------------
+- No scraping; only official REST APIs
+- Keep all keys in Replit Secrets
+- Use read-only exchange keys until you intentionally add trading
+- Add a 'Not financial advice' footer in the UI
+
+END OF ADD-ON PROMPT

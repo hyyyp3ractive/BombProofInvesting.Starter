@@ -1,0 +1,281 @@
+Database & Auth Implementation Spec — Crypto Evaluator App (Replit / FastAPI / SQLAlchemy)
+
+Purpose
+- Add multi-user support with secure login, per-user data isolation, and auditability.
+- Keep MVP simple on Replit (SQLite), with a clean path to Postgres later.
+
+Stack
+- Backend: FastAPI (Python 3.11), SQLAlchemy 2.x, Pydantic v2
+- Auth: JWT (access + refresh), Argon2 password hashing, optional email magic-code
+- Sessions: HttpOnly Secure cookies for refresh; short-lived access tokens in memory
+- DB: SQLite (dev) → Postgres (prod) via env var
+- Migrations: Alembic
+
+--------------------------------------------------------------------
+ENV VARIABLES (Replit → Tools → Secrets)
+--------------------------------------------------------------------
+APP_ENV=dev
+DATABASE_URL=sqlite+aiosqlite:///./app.db   # (prod: postgresql+psycopg://user:pass@host:5432/db)
+JWT_ACCESS_SECRET=CHANGE_ME
+JWT_REFRESH_SECRET=CHANGE_ME_TOO
+JWT_ACCESS_TTL_MIN=15
+JWT_REFRESH_TTL_DAYS=7
+ARGON2_MEMORY_COST=65536
+ARGON2_TIME_COST=3
+ARGON2_PARALLELISM=2
+SMTP_HOST=           # optional (for email codes/reset)
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+APP_BASE_URL=https://<your-repl>.replit.app
+
+--------------------------------------------------------------------
+DATA MODEL (tables & ownership)
+--------------------------------------------------------------------
+users
+  id (uuid, pk)
+  email (text, unique, indexed)
+  email_verified (bool, default false)
+  password_hash (text, nullable)           # null if passwordless-only
+  role (text: 'user'|'admin', default 'user')
+  settings_json (json)
+  created_at (int)
+  last_login_at (int)
+
+sessions
+  id (uuid, pk)
+  user_id (fk users.id, index)
+  refresh_token_hash (text, indexed)       # hash ONLY, never store raw token
+  user_agent (text)
+  ip (text)
+  expires_at (int)
+  revoked (bool, default false)
+  created_at (int)
+
+email_codes
+  id (uuid, pk)
+  user_id (fk users.id)
+  email (text, indexed)
+  purpose (text: 'verify'|'login'|'reset')
+  code_hash (text)                          # store hash, not raw code
+  expires_at (int)
+  used (bool, default false)
+  created_at (int)
+
+api_keys (optional for programmatic access later)
+  id (uuid, pk)
+  user_id (fk users.id, index)
+  key_prefix (text, unique)                # displayable prefix
+  key_hash (text)                          # hash of full key
+  scopes (text)                            # csv or json
+  created_at (int)
+  last_used_at (int)
+
+organizations (optional, future)
+  id (uuid, pk)
+  name (text, unique)
+  created_at (int)
+
+user_orgs (optional)
+  user_id (fk)
+  org_id (fk)
+  role (text: 'owner'|'member')
+  unique(user_id, org_id)
+
+# App domain (add user_id to every owned row)
+watchlist_items
+  id (uuid, pk)
+  user_id (fk users.id, index)
+  coin_id (text, index)
+  tags (text)       # csv/json
+  notes (text)
+  added_at (int)
+  unique(user_id, coin_id)
+
+ratings
+  id (uuid, pk)
+  user_id (fk users.id, index)
+  coin_id (text, index)
+  market_health (int)
+  tech_utility (int)
+  team_adoption (int)
+  tokenomics (int)
+  risk (int)
+  total_score (int)           # computed
+  notes (text)
+  created_at (int)
+
+transactions
+  id (uuid, pk)
+  user_id (fk users.id, index)
+  coin_id (text, index)
+  type (text: 'BUY'|'SELL'|'TRANSFER_IN'|'TRANSFER_OUT')
+  quantity (real)
+  price (real)
+  fee (real)
+  timestamp (int)
+  note (text)
+
+positions (optional materialized view or on-the-fly calc)
+
+dca_plans
+  id (uuid, pk)
+  user_id (fk users.id, index)
+  coin_id (text, index)
+  amount_usd (real)
+  cadence (text: 'WEEKLY'|'BIWEEKLY'|'MONTHLY')
+  start_date (int)
+  end_date (int, nullable)
+  active (bool)
+
+# Simulation & training (if enabled)
+sim_portfolios(id, user_id, name, cash, settings_json, created_at)
+sim_positions(id, portfolio_id, coin_id, qty, avg_cost)
+sim_orders(id, portfolio_id, ts, coin_id, side, qty, px_intent, status, fill_px, fee, slip)
+backtest_runs(id, user_id, name, start_date, end_date, capital, strategy_json, cost_bps, slip_bps, rebalance_freq, max_holdings, created_at, status, results_json)
+backtest_trades(id, run_id, ts, coin_id, side, qty, px, fee, slip, note)
+forecasts(id, user_id, ts_created, horizon_days, coin_id, threshold, p, outcome, brier)
+journal_entries(id, user_id, ts, context, text, tags)
+coach_feedback(id, user_id, ts, subject_type, subject_id, feedback_text, score_json)
+
+Indexes to add
+  - users.email unique
+  - sessions.refresh_token_hash index
+  - ratings unique(user_id, coin_id, created_at?) optional last-only design
+  - watchlist_items unique(user_id, coin_id)
+  - transactions (user_id, coin_id, timestamp) index
+  - dca_plans (user_id, coin_id, active) index
+
+--------------------------------------------------------------------
+AUTH FLOWS (choose 1–2 for MVP)
+--------------------------------------------------------------------
+A) Password + JWT (simple & offline)
+  - POST /auth/register {email, password}
+    * hash with Argon2 (passlib), store password_hash
+    * send verify email code if SMTP configured
+  - POST /auth/login {email, password}
+    * verify hash, create refresh session + set HttpOnly cookie
+    * return short-lived access token (JWT) in response body
+  - POST /auth/refresh (cookie)
+    * verify session token hash match; rotate session; return new access
+  - POST /auth/logout
+    * revoke session
+
+B) Passwordless magic code (works well if SMTP available)
+  - POST /auth/magic/request {email}
+    * generate 6–8 digit code, store code_hash + expiry (5–10 min), email it
+  - POST /auth/magic/verify {email, code}
+    * on success create user if first time, create session cookie + access JWT
+
+Security specifics
+  - Use Argon2id (passlib), not bcrypt if possible; tune costs from env
+  - Hash refresh tokens & email codes with SHA-256 + random salt
+  - HttpOnly, Secure, SameSite=Lax cookies for refresh token
+  - Access JWT: exp=15m, iss=app, aud=web, sub=user_id; sign with HS256
+  - Rate-limit /auth/* endpoints (e.g., 5/min per IP/email) to deter brute force
+  - Lockout policy: temporary lock after N failed attempts
+  - CSRF: access via bearer header; refresh via SameSite cookie (double-submit optional)
+  - CORS: restrict to your Replit origin in prod
+
+--------------------------------------------------------------------
+FASTAPI ROUTES (summary)
+--------------------------------------------------------------------
+POST   /auth/register
+POST   /auth/login
+POST   /auth/magic/request
+POST   /auth/magic/verify
+POST   /auth/refresh
+POST   /auth/logout
+GET    /me                         # user profile
+PATCH  /me                         # update settings
+# All app routes use Depends(get_current_user) to enforce ownership
+
+Ownership pattern
+  - Every SELECT/UPDATE/DELETE filters by user_id == current_user.id
+  - Admin-only routes guard with role == 'admin'
+
+--------------------------------------------------------------------
+SQLALCHEMY MODELS (minimal examples)
+--------------------------------------------------------------------
+# users.py
+class User(Base):
+    __tablename__ = "users"
+    id = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    email = mapped_column(String, unique=True, index=True, nullable=False)
+    email_verified = mapped_column(Boolean, default=False, nullable=False)
+    password_hash = mapped_column(String, nullable=True)
+    role = mapped_column(String, default="user", nullable=False)
+    settings_json = mapped_column(JSON, default=dict)
+    created_at = mapped_column(Integer, default=unix_now)
+    last_login_at = mapped_column(Integer, default=unix_now)
+
+# sessions.py
+class Session(Base):
+    __tablename__ = "sessions"
+    id = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    refresh_token_hash = mapped_column(String, index=True, nullable=False)
+    user_agent = mapped_column(String)
+    ip = mapped_column(String)
+    expires_at = mapped_column(Integer, nullable=False)
+    revoked = mapped_column(Boolean, default=False)
+    created_at = mapped_column(Integer, default=unix_now)
+
+# watchlist.py
+class WatchlistItem(Base):
+    __tablename__ = "watchlist_items"
+    id = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    coin_id = mapped_column(String, index=True, nullable=False)
+    tags = mapped_column(String, default="")
+    notes = mapped_column(Text, default="")
+    added_at = mapped_column(Integer, default=unix_now)
+    __table_args__ = (UniqueConstraint("user_id", "coin_id"),)
+
+--------------------------------------------------------------------
+ACCESS CONTROL IN CODE
+--------------------------------------------------------------------
+- Dependency: get_current_user() validates access JWT and loads User
+- Decorators/guards:
+    def require_owner(row, user): assert row.user_id == user.id
+    def require_admin(user): assert user.role == 'admin'
+
+--------------------------------------------------------------------
+ALEMBIC MIGRATIONS
+--------------------------------------------------------------------
+- alembic init migrations
+- Configure target_metadata to Base.metadata
+- alembic revision -m "init"
+- alembic upgrade head
+
+--------------------------------------------------------------------
+BACKUP & RECOVERY (SQLite on Replit)
+--------------------------------------------------------------------
+- Nightly copy app.db → app_backup_<date>.db
+- Export CSVs for key tables (users redacted) on demand
+- When moving to Postgres, pg_dump nightly + offsite storage
+
+--------------------------------------------------------------------
+TESTING
+--------------------------------------------------------------------
+- Unit: hashing & token utils; get_current_user; ownership checks
+- Integration: auth flow (register/login/refresh/logout), watchlist CRUD per user
+- Security: rate limit behavior, lockouts, cookie flags
+
+--------------------------------------------------------------------
+FUTURE HARDENING
+--------------------------------------------------------------------
+- MFA (TOTP) with pyotp; recovery codes
+- Passkeys (WebAuthn) via SimpleWebAuthn (front) + server libs (advanced)
+- Device-based session approval list
+- Org workspaces with role-based access control (RBAC)
+- Audit log table for key actions (create/delete/permission changes)
+
+--------------------------------------------------------------------
+ONBOARDING UX
+--------------------------------------------------------------------
+- Keep Guest Mode available; prompt to create account to save data/sync
+- Simple email + magic code flow if SMTP configured
+- “Delete my account & data” endpoint (compliance)
+
+END OF SPEC

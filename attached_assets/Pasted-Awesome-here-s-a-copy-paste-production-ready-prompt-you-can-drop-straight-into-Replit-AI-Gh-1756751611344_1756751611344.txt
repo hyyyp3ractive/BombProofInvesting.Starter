@@ -1,0 +1,334 @@
+Awesome—here’s a **copy-paste, production-ready prompt** you can drop straight into **Replit AI / Ghostwriter** to scaffold your app. It’s explicit about scope, stack, files, env vars, APIs, DB schema, endpoints, UI, and test coverage so the AI can generate a working project in one pass.
+
+---
+
+# 🔧 Replit AI Prompt — “Crypto Evaluator & Wealth Builder” (Crypto.com-oriented)
+
+**Goal:** Build a full-stack web app (deployable on Replit) that helps a beginner/intermediate user **find, rate, and track cryptocurrencies**, aligned to a Crypto.com-centric workflow. The app should pull market data (free sources), let users **score coins** with a 0–5 rubric across categories, manage **watchlists/notes**, simulate **DCA plans**, track a **portfolio**, and generate **actionable reports**. Optional integrations for advanced users should be cleanly stubbed.
+
+---
+
+## 0) Project Meta
+
+* **Project name:** `crypto-evaluator`
+* **License:** MIT
+* **Language:** TypeScript for frontend, Python for backend
+* **Frontend:** React + Vite + TailwindCSS + shadcn/ui + Recharts
+* **Backend:** FastAPI (Python 3.11), SQLAlchemy, SQLite (prod can later switch to Postgres)
+* **Background jobs:** APScheduler (periodic price refresh)
+* **Auth:** Local email+link placeholder (no email send; mocked), with “Guest mode” toggle (no auth required)
+* **AI add-on (optional):** OpenAI API for “explain this coin” & “compare two coins” summaries (generate server endpoints but gate behind env var)
+* **Packaging:** Ready to deploy on Replit; include `replit.nix` or `poetry.lock` as needed and a `Procfile` if required
+
+---
+
+## 1) App Features (MVP)
+
+### A. Crypto Evaluation Framework
+
+* Scoring rubric (0–5) for:
+
+  1. Market Health
+  2. Technology & Utility
+  3. Team & Adoption
+  4. Tokenomics
+  5. Risk Profile
+* Store **per-coin ratings** with timestamp and free-text rationale.
+* Auto-compute **Total Score (out of 25)** and color-code tiers.
+
+### B. Data Sources
+
+* **CoinGecko (free)** for market data (price, volume, market cap, supply, categories).
+
+  * Implement a clean data layer `services/coingecko.py` with rate-limit handling + basic caching.
+* **(Optional) Crypto.com Exchange API**: create **stub service** `services/cryptocom.py` with READMEs and function signatures to later fetch prices/balances (do not require keys to run MVP).
+* Use a **refresh job** (APScheduler) to update watched coins every 5–10 minutes (configurable).
+
+### C. Watchlist & Notes
+
+* Add/remove coins to a **watchlist**.
+* Per-coin **notes**, links (whitepaper, docs), and **tags** (e.g., L1, DeFi, meme).
+
+### D. Portfolio Tracker
+
+* Manual transactions: buy/sell/transfer with fees and notes.
+* Derived metrics: cost basis, P/L, allocation by asset, time-weighted value chart.
+* CSV import/export for transactions.
+
+### E. DCA Planner
+
+* Per-coin recurring-buy simulator: amount, cadence (weekly/biweekly/monthly), start date.
+* Simulate expected shares accumulated and backtest vs. lump sum (using historical prices from CoinGecko).
+
+### F. Alerts (local only, MVP)
+
+* Price thresholds & 24h % change alerts (browser notifications + in-app banner).
+
+### G. Reports
+
+* “Top picks this week” (highest score, minimum liquidity filter).
+* “Risk heatmap” by category.
+* “Portfolio drift” vs. target allocation.
+
+### H. AI Helpers (optional, behind env flag)
+
+* `/ai/explain?coin=ETH` → 1-paragraph plain-English summary using OpenAI if `OPENAI_API_KEY` is set.
+* `/ai/compare?coins=ETH,SOL` → bullet list of similarities/differences.
+
+---
+
+## 2) Tech & Files
+
+### Repo Structure
+
+```
+crypto-evaluator/
+  README.md
+  LICENSE
+  .env.example
+  replit.nix                # or appropriate Replit config
+  Procfile                  # if needed for Replit run
+  backend/
+    app.py
+    core/config.py
+    db/database.py
+    db/models.py
+    db/schemas.py
+    db/migrations/          # optional alembic scaffolding
+    services/coingecko.py
+    services/cryptocom.py   # stub for future
+    services/alerts.py
+    services/dca.py
+    routers/auth.py
+    routers/coins.py
+    routers/ratings.py
+    routers/watchlist.py
+    routers/portfolio.py
+    routers/dca.py
+    routers/reports.py
+    routers/ai.py
+    utils/cache.py
+    utils/validators.py
+    tests/                  # pytest
+      test_coins.py
+      test_portfolio.py
+      test_ratings.py
+  frontend/
+    index.html
+    vite.config.ts
+    src/
+      main.tsx
+      App.tsx
+      lib/api.ts
+      lib/hooks.ts
+      lib/utils.ts
+      components/
+        ui/                 # shadcn components
+        Charts/
+          LineChart.tsx
+          PieChart.tsx
+          Heatmap.tsx
+      pages/
+        Dashboard.tsx
+        Coins.tsx
+        CoinDetail.tsx
+        Ratings.tsx
+        Portfolio.tsx
+        DCA.tsx
+        Reports.tsx
+        Settings.tsx
+      styles/
+        globals.css
+      state/
+        store.ts
+        slices/
+          coins.ts
+          ratings.ts
+          portfolio.ts
+          watchlist.ts
+          settings.ts
+```
+
+### Environment Variables (`.env.example`)
+
+```
+# Backend
+PORT=8000
+COINGECKO_BASE_URL=https://api.coingecko.com/api/v3
+REFRESH_INTERVAL_MIN=10
+
+# Optional AI
+OPENAI_API_KEY=
+
+# Optional Crypto.com Exchange (future)
+CRYPTOCOM_API_KEY=
+CRYPTOCOM_API_SECRET=
+CRYPTOCOM_BASE_URL=https://api.crypto.com/exchange/v1
+```
+
+---
+
+## 3) Database Schema (SQLAlchemy models)
+
+* **Coin**: `id` (slug), `symbol`, `name`, `category`, `platform`, `last_price`, `market_cap`, `volume_24h`, `circulating_supply`, `total_supply`, `max_supply`, `updated_at`.
+* **Rating**: `id`, `coin_id (FK)`, `market_health` (int 0–5), `tech_utility` (0–5), `team_adoption` (0–5), `tokenomics` (0–5), `risk` (0–5), `total_score` (computed), `notes`, `created_at`.
+* **WatchlistItem**: `id`, `coin_id (FK)`, `tags` (CSV), `notes`, `added_at`.
+* **Note**: `id`, `coin_id (FK)`, `title`, `content`, `links (JSON)`, `created_at`.
+* **Transaction**: `id`, `coin_id (FK)`, `type` (BUY/SELL/TRANSFER\_IN/TRANSFER\_OUT), `quantity`, `price`, `fee`, `timestamp`, `note`.
+* **PortfolioTarget**: `id`, `coin_id (FK)`, `target_pct` (float).
+* **DCAPlan**: `id`, `coin_id (FK)`, `amount_usd`, `cadence` (WEEKLY|BIWEEKLY|MONTHLY), `start_date`, `end_date (nullable)`, `active` (bool).
+* **Alert**: `id`, `coin_id (FK)`, `price_above (nullable)`, `price_below (nullable)`, `percent_change_24h (nullable)`, `active` (bool), `created_at`.
+
+> Provide Pydantic schemas mirroring these for request/response DTOs.
+
+---
+
+## 4) Backend API (FastAPI)
+
+**Base URL:** `/api`
+
+* `GET /health`
+* `GET /coins/search?q=` → fuzzy search CoinGecko IDs/symbols; include paging.
+* `GET /coins/{coin_id}` → details + cached market data.
+* `POST /coins/refresh` → refresh selected coins (body: list of ids).
+* `GET /watchlist` | `POST /watchlist` | `DELETE /watchlist/{id}`
+* `GET /ratings?coin_id=` | `POST /ratings`
+
+  * Server computes `total_score = sum(fields)`
+* `GET /portfolio/holdings` → summarize positions from transactions (FIFO cost basis)
+* `GET /portfolio/timeseries?range=1y` → aggregate historic value using daily prices
+* `POST /portfolio/transactions` | `DELETE /portfolio/transactions/{id}`
+* `GET /dca/plans` | `POST /dca/plans` | `POST /dca/simulate` → returns projected shares & backtest metrics
+* `GET /reports/top-picks?min_liquidity=` → top by score; filter by market cap/volume
+* `GET /reports/risk-heatmap` → return category → average risk
+* `GET /reports/drift` → current vs. `PortfolioTarget`
+* `GET /alerts` | `POST /alerts` | `DELETE /alerts/{id}`
+* **Optional AI (guard by env):**
+
+  * `GET /ai/explain?coin=`
+  * `GET /ai/compare?coins=ETH,SOL`
+
+**Implementation notes**
+
+* Centralize CoinGecko calls with retry + basic in-memory cache (LRU).
+* Respect CoinGecko rate limits, stagger refresh jobs.
+* Provide seed data for top 50 coins on first run (by market cap).
+* Unit tests for endpoints: coins search, rating compute, portfolio P/L.
+
+---
+
+## 5) Frontend (React + Vite + Tailwind + shadcn/ui + Recharts)
+
+**Pages**
+
+1. **Dashboard**
+
+   * KPI cards: portfolio value, 24h change, # holdings, top gainer/loser.
+   * Watchlist snapshot.
+   * “Top Picks” (by total score) with filters.
+2. **Coins**
+
+   * Search, category filter (L1, DeFi, Meme).
+   * Table columns: Name, Price, 24h %, Volume, Market Cap, Score (if rated), Actions (Watch/Rate).
+3. **Coin Detail**
+
+   * Price chart (1D/7D/30D/1Y).
+   * Fundamentals: market cap, supply, links.
+   * Ratings panel with 5 sliders (0–5) + notes; show computed total.
+   * Notes + external links section.
+4. **Ratings**
+
+   * Rank by total score; quick edit; export CSV.
+5. **Portfolio**
+
+   * Holdings table (qty, cost basis, value, P/L).
+   * Time series chart of portfolio value.
+   * Transaction form + CSV import/export.
+6. **DCA**
+
+   * Configure plans; simulate vs historical; show projected accumulation curve.
+7. **Reports**
+
+   * Risk heatmap; drift vs target; “Top Picks” report with PDF export.
+8. **Settings**
+
+   * Refresh interval; enable AI; set OpenAI key (stored client-side only for demo); manage targets; theme toggle.
+
+**UI/UX**
+
+* Use shadcn/ui for Cards, Tabs, Dialogs, Tables, Alerts.
+* Recharts for Line (prices/timeseries), Pie (allocation), and custom heatmap (simple grid).
+* Save state to backend; avoid localStorage except transient UI.
+* Provide a top-right “Guest Mode” badge when auth disabled.
+
+---
+
+## 6) Security & Compliance (MVP level)
+
+* No keys checked into repo. Read secrets from env.
+* CORS: allow same-origin only (Replit proxy origin).
+* Input validation for all POST routes.
+* Clear “Not financial advice” disclaimer in footer.
+* **No trading features** in MVP. Portfolio is **manual**. (Advanced: later add Crypto.com Exchange auth + read balances.)
+
+---
+
+## 7) Testing
+
+* **Backend:** pytest for:
+
+  * `/coins/search` returns expected matches
+  * `/ratings` computes `total_score` correctly
+  * FIFO cost basis & P/L math correctness
+  * DCA simulation dates/accumulation edge cases
+* **Frontend:** minimal Vitest for utilities + rendering of key components.
+
+---
+
+## 8) Developer Experience
+
+* Provide **`README.md`** with setup:
+
+  * Create and populate `.env` from `.env.example`
+  * How to run backend & frontend concurrently on Replit
+  * How to seed coins
+  * How to enable AI
+* Provide **Makefile** (optional) with `make dev`, `make test`, `make seed`.
+
+---
+
+## 9) Stretch (scaffold only; don’t block MVP)
+
+* **Electron/Tauri packaging** instructions section in README for desktop wrapper.
+* **Retool/Bubble connectors** mention in README.
+* **Webhook** endpoint stub for future alert delivery.
+
+---
+
+## 10) Acceptance Criteria
+
+* App runs on Replit with one click (or two tabs: backend then frontend).
+* Search & watchlist work; coin detail loads from CoinGecko; ratings saved and ranked.
+* Portfolio transactions persist; value & P/L compute; charts render.
+* DCA simulator returns results and chart.
+* Reports page shows top picks + risk heatmap.
+* Optional AI endpoints return 200 only if `OPENAI_API_KEY` is set.
+* Basic tests pass.
+
+---
+
+**Deliver now:**
+
+1. Full repository per structure above
+2. Working APIs & React UI with Tailwind + shadcn
+3. Seed + sample data
+4. README with run instructions on Replit
+5. Minimal test suite
+
+---
+
+### (End of Prompt)
+
+---
+
+If you want, I can also generate a **CSV seed list** of the top \~50 coins (id, symbol, name) and a **starter scoring rubric spreadsheet** to import—but the prompt above is enough for Replit AI to scaffold the whole app.

@@ -1,0 +1,150 @@
+Replit Add-On Prompt — Groq AI Integration (Free-tier friendly)
+
+COPY/PASTE under your existing Replit AI prompts. This adds Groq as the default AI provider for in-app coin summaries and comparisons, using official Groq APIs (OpenAI-compatible). No scraping.
+
+--------------------------------------------------------------------
+GOALS
+--------------------------------------------------------------------
+1) Add Groq-powered endpoints to the backend for: 
+   - /api/ai/explain?coin=ETH 
+   - /api/ai/compare?coins=ETH,SOL
+2) Use Groq's OpenAI-compatible API for chat completions.
+3) Keep AI optional: enable only when GROQ_API_KEY is set.
+4) Never log or expose secrets; handle rate limits gracefully.
+
+Docs references (for implementer):
+- OpenAI-compatible base URL: https://api.groq.com/openai/v1
+- Chat completions endpoint: POST /chat/completions
+- SDKs: pip install groq  (Python), npm i groq-sdk (JS)
+- Pricing & Free tier exist; keep requests light and cache results.
+
+--------------------------------------------------------------------
+ENV & CONFIG
+--------------------------------------------------------------------
+Update .env.example:
+  # Groq AI (optional, enables in-app AI summaries)
+  GROQ_API_KEY=
+  GROQ_BASE_URL=https://api.groq.com/openai/v1
+  GROQ_MODEL=llama-3.1-70b-versatile   # or another current Groq chat model
+  GROQ_MAX_TOKENS=600
+  GROQ_TEMPERATURE=0.2
+
+Backend config (backend/core/config.py):
+  - load GROQ_* vars with defaults.
+  - feature flag: AI_ENABLED = bool(GROQ_API_KEY)
+
+--------------------------------------------------------------------
+DEPENDENCIES
+--------------------------------------------------------------------
+Backend:
+  pip install groq httpx
+  # If using OpenAI client with Groq (alternative):
+  # pip install openai>=1.40
+
+--------------------------------------------------------------------
+BACKEND IMPLEMENTATION
+--------------------------------------------------------------------
+File: backend/services/ai_groq.py
+  from typing import List
+  import os
+  from groq import Groq
+
+  client = None
+  def get_client():
+      global client
+      if client is None:
+          api_key = os.getenv("GROQ_API_KEY")
+          if not api_key:
+              raise RuntimeError("GROQ_API_KEY not set")
+          client = Groq(api_key=api_key)
+      return client
+
+  def chat(messages: List[dict], model: str | None = None, temperature: float | None = None, max_tokens: int | None = None) -> str:
+      cl = get_client()
+      mdl = model or os.getenv("GROQ_MODEL", "llama-3.1-70b-versatile")
+      temp = float(os.getenv("GROQ_TEMPERATURE", "0.2")) if temperature is None else temperature
+      max_toks = int(os.getenv("GROQ_MAX_TOKENS", "600")) if max_tokens is None else max_tokens
+      resp = cl.chat.completions.create(
+          model=mdl,
+          messages=messages,
+          temperature=temp,
+          max_tokens=max_toks,
+      )
+      return resp.choices[0].message.content.strip()
+
+Alternative (OpenAI client pointing at Groq base URL):
+  import os
+  from openai import OpenAI
+  client = OpenAI(api_key=os.getenv("GROQ_API_KEY"), base_url=os.getenv("GROQ_BASE_URL","https://api.groq.com/openai/v1"))
+  # then client.chat.completions.create(...)
+
+File: backend/routers/ai.py
+  from fastapi import APIRouter, HTTPException, Query
+  import os
+  from services.ai_groq import chat
+  from services.providers.coingecko import get_coin_details  # use your existing data layer
+
+  router = APIRouter(prefix="/api/ai", tags=["ai"])
+
+  def ai_enabled() -> bool:
+      return bool(os.getenv("GROQ_API_KEY"))
+
+  @router.get("/explain")
+  def explain(coin: str = Query(..., min_length=2)):
+      if not ai_enabled():
+          raise HTTPException(status_code=503, detail="AI features disabled")
+      # fetch fundamentals for better answers (name, use-case, supply, market cap)
+      fundamentals = get_coin_details(coin)  # implement or reuse normalized provider call
+      sys = {"role": "system", "content": "You are a concise crypto analyst for beginners. Be neutral, cite concrete facts (with units), and avoid financial advice."}
+      user = {"role": "user", "content": f"Explain {fundamentals.get('name', coin)} in 10 bullet points max, covering: purpose, tech, tokenomics (supply/issuance), security/audits if known, competitors, major risks, and what metrics to monitor over time. Use 2–3 short sentences per bullet."}
+      out = chat([sys, user])
+      return {"coin": coin, "summary": out}
+
+  @router.get("/compare")
+  def compare(coins: str = Query(..., min_length=3)):
+      if not ai_enabled():
+          raise HTTPException(status_code=503, detail="AI features disabled")
+      ids = [c.strip() for c in coins.split(",") if c.strip()]
+      if len(ids) < 2:
+          raise HTTPException(status_code=400, detail="Provide at least two coins, e.g., ETH,SOL")
+      # pull fundamentals for both
+      # compose structured prompt with a table-like bullet comparison and a neutral risks section
+      sys = {"role": "system", "content": "You are a neutral crypto analyst. Be specific and concise; no financial advice."}
+      user = {"role": "user", "content": f"Compare these coins head-to-head: {', '.join(ids)}. Cover: consensus/scalability, fees/throughput, tokenomics, ecosystem maturity, developer traction, and key risks. End with a monitoring checklist (metrics to watch). Keep it under ~250 words."}
+      out = chat([sys, user])
+      return {"coins": ids, "comparison": out}
+
+Wire into backend/app.py:
+  from routers import ai as ai_router
+  app.include_router(ai_router.router)
+
+--------------------------------------------------------------------
+FRONTEND INTEGRATION
+--------------------------------------------------------------------
+- Settings page: toggle “Enable AI” (enabled if server returns 200 for /api/ai/explain?coin=BTC).
+- Coin Detail page: add an “Explain” button -> calls /api/ai/explain.
+- Coins page: select two rows, click “Compare” -> calls /api/ai/compare?coins=ETH,SOL.
+- Display response in a modal with copy-to-clipboard.
+
+--------------------------------------------------------------------
+RATE LIMITS & CACHING
+--------------------------------------------------------------------
+- Cache completed AI summaries for 12–24h per coin & comparison pair in SQLite (table: ai_cache(key TEXT PK, value TEXT, expires_at INT)).
+- Debounce user clicks; limit 1 AI call per coin per minute from frontend.
+- Handle 429/5xx with exponential backoff (2, 4, 8s) and friendly messages.
+
+--------------------------------------------------------------------
+TESTS
+--------------------------------------------------------------------
+- Unit test ai_groq.chat() by monkeypatching the Groq client.
+- Endpoint tests: /ai/explain and /ai/compare return 503 when GROQ_API_KEY missing; 200 with mocked client.
+- Cache tests: second call hits cache and avoids network.
+
+--------------------------------------------------------------------
+SECURITY
+--------------------------------------------------------------------
+- Never log prompts or responses when they might include secrets.
+- Read GROQ_API_KEY from env (Replit Secrets) only; do not hardcode.
+- Add a short “Not financial advice” disclaimer to AI responses in the UI.
+
+END OF GROQ ADD-ON PROMPT

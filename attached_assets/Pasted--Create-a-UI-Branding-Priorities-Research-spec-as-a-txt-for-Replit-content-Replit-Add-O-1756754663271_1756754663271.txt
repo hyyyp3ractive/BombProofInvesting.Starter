@@ -1,0 +1,250 @@
+# Create a UI + Branding + Priorities + Research spec as a .txt for Replit
+content = """Replit Add-On Prompt — UI Wireframes, Branding, MVP Priorities, and User Research
+
+COPY/PASTE under your existing Replit AI prompts. This provides specific UI mockups (ASCII wireframes), brand styling, a strict priority order for MVP implementation, and initial user research assumptions/findings to guide decisions. Keep all prior API/caching/AI specs unchanged.
+
+====================================================================
+A) UI MOCKUPS / WIREFRAMES (ASCII)
+====================================================================
+
+GLOBAL LAYOUT (Desktop-first; responsive)
+-----------------------------------------
+[Sidebar 72px] [Topbar (search, quick filters, AI toggle)] [Content area]
+
+Sidebar (icons + labels on hover):
+  - Dashboard
+  - Coins
+  - Coin Detail (hidden; navigates from Coins)
+  - Ratings
+  - Portfolio
+  - DCA
+  - Reports
+  - Settings
+
+Topbar:
+  [⌕ Search (coins, symbols)] [Filter: Category ▾] [Filter: Bucket ▾]
+  [AI Toggle ▣] [Theme ▣] [User/Guest ▾]
+
+Color pills on rows: Bucket (High/Med/Low), Type tags (L1, DeFi, Stable, Meme, etc).
+
+
+DASHBOARD
+---------
++---------------------------------------------------------------+
+|  KPI: Portfolio Value | 24h P/L | # Holdings | Top Gainer    |
++---------------------------------------------------------------+
+|  Watchlist (table: Coin | Price | 24h% | Score | Bucket | ▸ ) |
++---------------------------------------------------------------+
+|  Top Picks (by Score)         |  Risk Heatmap (grid)         |
+|  [See all Ratings ▸]          |  [See full Reports ▸]        |
++---------------------------------------------------------------+
+
+COINS (Search + Browse)
+-----------------------
++-----------------------------------------------------------------------+
+| [⌕ Search] [Category ▾] [Bucket ▾] [MCap ▾] [Volume ▾] [Reset]        |
++-----------------------------------------------------------------------+
+| Name      | Price   | 24h% | Volume     | MCap       | Score | Bucket |
+| ETH ▸     |  3,200  | 1.2% | 18.2B      | 380B       | 22    |  Low   | [Watch] [Rate] [Explain] |
+| SOL ▸     |  145    | 2.1% |  5.1B      |  67B       | 19    |  Med   | [Watch] [Rate] [Explain] |
+| ...                                                               ... |
++-----------------------------------------------------------------------+
+Pagination ▸  Rows per page ▾
+
+COIN DETAIL
+-----------
++----------------------------------+  +-------------------------------+
+|  ETH  [L1][DeFi]  Bucket: Low    |  |  Fundamentals                 |
+|  Price: $3,200  (1D/7D/30D/1Y)   |  |  MCap: $380B                  |
+|  [Line Chart with range tabs]    |  |  24h Vol: $18.2B              |
++----------------------------------+  |  Supply: circ/total/max       |
+|  Ratings                         |  |  Links: site, whitepaper      |
+|  Market health   [----|--] (4)   |  +-------------------------------+
+|  Tech & utility  [---|---] (5)   |  Notes & Tags                   |
+|  Team & adoption [--|----] (4)   |  [Add Note] [Add Tag]           |
+|  Tokenomics      [----|--] (4)   +----------------------------------+
+|  Risk            [--|----] (3)   |  AI Explain   [Generate]        |
+|  Total Score: 20/25              |  (cached 24h)                   |
++----------------------------------+  +--------------------------------+
+
+RATINGS
+-------
++-------------------------------------------------------------------+
+| Filters: [Min Score ▾] [Bucket ▾] [Type Tag ▾] [Export CSV]       |
++-------------------------------------------------------------------+
+| Coin | Score | Market | Tech | Team | Tokenomics | Risk | Bucket  |
+| ETH  | 22    | 5      | 5    | 5    | 4          | 3    | Low     |
+| SOL  | 19    | 4      | 5    | 4    | 3          | 4    | Med     |
++-------------------------------------------------------------------+
+
+PORTFOLIO
+---------
++------------------------------------+  +------------------------------+
+| Holdings                           |  | Transactions                 |
+| Coin | Qty | Cost | Value | P/L%   |  | [Add Tx] [Import CSV]       |
+| ...                                |  | Type ▾ | Qty | Price | Fee  |
++------------------------------------+  +------------------------------+
+| Allocation (Pie)                   |  | Time Series (Value)          |
++------------------------------------+  +------------------------------+
+
+DCA
+---
++-----------------------------------+  +-------------------------------+
+| Plans                             |  | Simulator                     |
+| ETH $50 Weekly Since 2024-01-01   |  | [Coin ▾] [Amount] [Cadence]  |
+| SOL $25 Biweekly Since 2024-06-01 |  | [Start Date] [Simulate]      |
++-----------------------------------+  | Chart: Accumulated vs Lump    |
+                                      +-------------------------------+
+
+REPORTS
+-------
+[Top Picks (Score + Liquidity filter)] [Risk Heatmap] [Drift vs Target]
+
+SETTINGS
+--------
+- Data: Refresh interval, cache TTLs
+- Scoring Weights: sliders for Risk/Reward components
+- AI: Enable Groq, Model, Max Tokens
+- Theme: Light/Dark, accent color
+- Export/Import app config JSON
+
+
+====================================================================
+B) BRAND COLORS & STYLING
+====================================================================
+
+Theme System: Light + Dark with accessible contrast (WCAG AA+).
+
+Palette A (Default): "Midnight Quartz" (Dark) + "Cyan Aurora"
+  Primary:        #22D3EE  (cyan-400)
+  Primary (hover):#06B6D4  (cyan-500)
+  Background:     #0B0F14
+  Surface:        #111827
+  Surface-Alt:    #0F172A
+  Border:         #1F2937
+  Text Primary:   #E5E7EB
+  Text Muted:     #9CA3AF
+  Positive:       #10B981
+  Warning:        #F59E0B
+  Danger:         #EF4444
+  High Risk pill: #F43F5E
+  Medium Risk:    #F59E0B
+  Low Risk:       #10B981
+
+Palette B (Light): "Paper White" + "Indigo Accent"
+  Primary:        #4F46E5
+  Background:     #FFFFFF
+  Surface:        #F8FAFC
+  Border:         #E5E7EB
+  Text Primary:   #0F172A
+  Text Muted:     #475569
+
+Typography
+  - Headings: Inter, 600–800 weight
+  - Body: Inter 400–500
+  - Mono (numbers/charts): JetBrains Mono
+
+Tailwind / CSS Tokens (shadcn/ui CSS vars)
+  :root {
+    --background:        11 15 20;     /* #0B0F14 */
+    --foreground:        229 231 235;  /* #E5E7EB */
+    --card:              17 24 39;     /* #111827 */
+    --muted-foreground:  156 163 175;  /* #9CA3AF */
+    --primary:           34 211 238;   /* #22D3EE */
+    --ring:              34 211 238;
+    --border:            31 41 55;     /* #1F2937 */
+    --success:           16 185 129;
+    --warning:           245 158 11;
+    --danger:            239 68 68;
+  }
+
+Component accents (shadcn/ui):
+  - Cards: rounded-2xl, shadow-sm, border
+  - Buttons: rounded-xl, focus:ring-2, disabled:opacity-60
+  - Tables: sticky header, zebra rows on hover
+  - Charts: 8px grid lines, compact tooltips, legend top-right
+
+
+====================================================================
+C) PRIORITY ORDER FOR MVP
+====================================================================
+
+P0 — Infrastructure (Day 0–1)
+  - Repo scaffolding (frontend+backend), CI, .env.example, Secrets
+  - Health endpoint, CORS, error shape, logging
+
+P1 — Core Browse & Rate (Day 1–3)
+  - Coin search/browse table (CoinGecko data)
+  - Coin detail page (price chart + fundamentals)
+  - Ratings model + sliders + total score
+  - Watchlist add/remove
+  - Minimal cache + backoff + tests
+
+P2 — Risk/Reward Buckets (Day 3–4)
+  - Implement RiskScore/RewardScore
+  - Map to High/Med/Low buckets + color pills
+  - Ratings page (rank, filter, export CSV)
+  - Top Picks report (score + liquidity filter)
+
+P3 — Portfolio & DCA (Day 4–6)
+  - Transactions (CRUD + CSV import/export)
+  - Holdings summary, P/L, allocation pie
+  - Portfolio value time series
+  - DCA planner + simulator + simple backtest
+
+P4 — AI & Alerts (Day 6–7)
+  - Groq-powered /ai/explain and /ai/compare (cached 24h)
+  - Price alerts (local/browser) and in-app banners
+
+P5 — Polish (Day 7+)
+  - Settings (weights, theme, refresh)
+  - Empty states, skeleton loaders, accessibility pass
+  - README polish, sample data, onboarding tips
+
+Each phase should ship deployable value; avoid partial merges that break flows.
+
+
+====================================================================
+D) USER RESEARCH / FEEDBACK (ASSUMPTIONS + PLAN)
+====================================================================
+
+Personas
+  1) Beginner Saver (“Crypto-Curious”): Wants simple signals, core/safer set, and DCA.
+  2) Builder/Analyst: Wants structured scoring, fundamentals, and exportable reports.
+  3) Opportunistic Trader: Wants bucketed risk and quick compare, but not derivatives.
+
+Top Jobs-to-be-Done
+  - “Help me quickly filter thousands of coins down to a shortlist I understand.”
+  - “Show me which coins are relatively safer for long-term holds.”
+  - “If I DCA into X and Y, what’s the projected accumulation vs lump-sum?”
+  - “Explain coin ABC in plain English without hype.”
+
+Observed Pain Points (from similar tools)
+  - Data overload; unclear what matters → scoring + buckets + ‘Why’ tooltips.
+  - Fragile watchlists; no rationale tracking → notes + tags per coin.
+  - Portfolio trackers hide fees/cost basis → explicit fields + FIFO calc.
+  - AI blurbs too generic → cache fundamentals and prompt for specifics.
+
+Validation Plan (quick loops)
+  - First-run survey (1 screen) asks: experience level, goals, risk comfort.
+  - In-app thumbs up/down on AI Explain usefulness (stores per-coin).
+  - Track feature usage: ratings edits, DCA runs, watchlist conversions.
+  - Success metrics: time-to-shortlist (<10 min), % users creating ≥1 rating, DCA plan creation rate, weekly retention.
+
+Non-Goals (MVP)
+  - No derivatives or leverage
+  - No automated trading
+  - No custodial key handling
+
+Compliance / Safety
+  - Prominent “Not financial advice” disclaimer
+  - Read-only integrations; keys via Secrets only
+  - No scraping; API ToS respected
+
+END OF SPEC
+"""
+path = "/mnt/data/replit_ui_branding_priorities_research.txt"
+with open(path, "w", encoding="utf-8") as f:
+    f.write(content)
+
+path
