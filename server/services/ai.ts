@@ -5,15 +5,47 @@ interface ChatMessage {
   content: string;
 }
 
+interface RateLimitInfo {
+  requestsThisMinute: number;
+  lastReset: number;
+}
+
 class AIService {
+  private rateLimitInfo: RateLimitInfo = { requestsThisMinute: 0, lastReset: Date.now() };
+  private readonly MAX_REQUESTS_PER_MINUTE = 10; // Conservative for free tier
+  
   private isEnabled(): boolean {
     return !!config.GROQ_API_KEY;
+  }
+  
+  private checkRateLimit(): boolean {
+    const now = Date.now();
+    const minutesSinceReset = (now - this.rateLimitInfo.lastReset) / (1000 * 60);
+    
+    // Reset counter every minute
+    if (minutesSinceReset >= 1) {
+      this.rateLimitInfo = { requestsThisMinute: 0, lastReset: now };
+    }
+    
+    return this.rateLimitInfo.requestsThisMinute < this.MAX_REQUESTS_PER_MINUTE;
+  }
+  
+  private async waitForRateLimit(): Promise<void> {
+    if (this.checkRateLimit()) return;
+    
+    const timeToWait = 60000 - (Date.now() - this.rateLimitInfo.lastReset);
+    console.log(`⏱️ AI rate limit reached, waiting ${Math.ceil(timeToWait / 1000)}s`);
+    await new Promise(resolve => setTimeout(resolve, timeToWait));
   }
   
   private async chat(messages: ChatMessage[]): Promise<string> {
     if (!this.isEnabled()) {
       throw new Error("AI features are disabled - GROQ_API_KEY not configured");
     }
+    
+    // Wait for rate limit if needed
+    await this.waitForRateLimit();
+    this.rateLimitInfo.requestsThisMinute++;
     
     const response = await fetch(`${config.GROQ_BASE_URL}/chat/completions`, {
       method: "POST",

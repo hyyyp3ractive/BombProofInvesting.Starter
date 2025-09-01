@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { marketDataService } from "./services/market_data";
 import { aiService } from "./services/ai";
+import { riskScoringService } from "./services/risk_scoring";
 import { 
   hashPassword, verifyPassword, generateTokens, verifyAccessToken, 
   verifyRefreshToken, hashToken, extractBearerToken 
@@ -52,7 +53,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: devEmail, 
           passwordHash,
           role: "user",
-          emailVerified: true,
         });
         console.log("🚀 Dev user created: dev@example.com / dev123456");
       }
@@ -550,6 +550,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ error: { code: "VALIDATION_ERROR", message: error.message } });
     }
   }));
+
+  // Risk scoring routes
+  app.get("/api/risk-score/:coinId", async (req: Request, res: Response) => {
+    try {
+      const { coinId } = req.params;
+      const score = await riskScoringService.calculateScore(coinId);
+      res.json(score);
+    } catch (error: any) {
+      console.error("Risk scoring error:", error);
+      res.status(500).json({ error: { code: "SCORING_ERROR", message: "Failed to calculate risk score" } });
+    }
+  });
+
+  // Provider health monitoring
+  app.get("/api/health/providers", async (req: Request, res: Response) => {
+    try {
+      const providerStatus = marketDataService.getProviderStatus();
+      res.json({ providers: providerStatus });
+    } catch (error: any) {
+      console.error("Provider health check error:", error);
+      res.status(500).json({ error: { code: "HEALTH_CHECK_ERROR", message: "Failed to check provider health" } });
+    }
+  });
+
+  // Cache management
+  app.delete("/api/cache/market-data", async (req: Request, res: Response) => {
+    try {
+      marketDataService.clearCache();
+      res.json({ message: "Market data cache cleared" });
+    } catch (error: any) {
+      console.error("Cache clear error:", error);
+      res.status(500).json({ error: { code: "CACHE_ERROR", message: "Failed to clear cache" } });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
