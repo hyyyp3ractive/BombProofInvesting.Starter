@@ -542,7 +542,11 @@ export default function StarterPortfolio() {
               <p className="text-xs text-muted-foreground">
                 Pick a look that feels right for you - you can always change it later!
               </p>
-              <Select value={currentTheme} onValueChange={setCurrentTheme}>
+              <Select value={currentTheme} onValueChange={(theme) => {
+                setCurrentTheme(theme);
+                // Reload page to ensure theme is fully applied sitewide
+                setTimeout(() => window.location.reload(), 100);
+              }}>
                 <SelectTrigger className="bg-card border-border" data-testid="select-theme-intake">
                   <SelectValue />
                 </SelectTrigger>
