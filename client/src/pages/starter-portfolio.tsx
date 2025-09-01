@@ -146,6 +146,11 @@ export default function StarterPortfolio() {
 
   const updateIntake = (field: keyof IntakeData, value: any) => {
     setIntake(prev => ({ ...prev, [field]: value }));
+    
+    // Auto-toggle beginner mode based on experience level
+    if (field === "experience") {
+      setBeginnerMode(value === "Beginner");
+    }
   };
 
   const toggleCategory = (category: string) => {
