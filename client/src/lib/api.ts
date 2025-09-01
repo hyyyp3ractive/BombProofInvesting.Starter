@@ -137,6 +137,12 @@ export class ApiClient {
     const response = await this.makeRequest("DELETE", `/starter-portfolios/${id}`);
     return response.json();
   }
+  
+  // Term explanation methods
+  async explainTerm(term: string) {
+    const response = await this.makeRequest("POST", "/ai/explain-term", { term });
+    return response.json();
+  }
 
   // Watchlist methods
   async getWatchlist() {

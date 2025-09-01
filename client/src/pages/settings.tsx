@@ -46,6 +46,7 @@ import {
 interface UserSettings {
   theme: "light" | "dark" | "system";
   aiEnabled: boolean;
+  aiTooltips: boolean;
   emailNotifications: boolean;
   priceAlerts: boolean;
   portfolioAlerts: boolean;
@@ -69,6 +70,7 @@ export default function Settings() {
   const [settings, setSettings] = useState<UserSettings>({
     theme: "dark",
     aiEnabled: true,
+    aiTooltips: true,
     emailNotifications: false,
     priceAlerts: true,
     portfolioAlerts: true,
@@ -347,6 +349,20 @@ export default function Settings() {
                 checked={settings.aiEnabled}
                 onCheckedChange={(checked) => setSettings({ ...settings, aiEnabled: checked })}
                 data-testid="switch-ai-enabled"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>AI Term Tooltips</Label>
+                <p className="text-sm text-muted-foreground">
+                  Show AI explanations when hovering over financial terms
+                </p>
+              </div>
+              <Switch
+                checked={settings.aiTooltips}
+                onCheckedChange={(checked) => setSettings({ ...settings, aiTooltips: checked })}
+                data-testid="switch-ai-tooltips"
               />
             </div>
 

@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FinancialTerm } from "@/components/ui/term-tooltip";
 import { 
   Sparkles, 
   TrendingUp, 
@@ -519,7 +520,11 @@ export default function StarterPortfolio() {
 
             {/* Risk Tolerance */}
             <div className="space-y-3">
-              <Label>Risk Tolerance</Label>
+              <Label>
+                <FinancialTerm term="risk tolerance">
+                  Risk Tolerance
+                </FinancialTerm>
+              </Label>
               <Select value={intake.riskTolerance} onValueChange={(value: any) => updateIntake("riskTolerance", value)}>
                 <SelectTrigger data-testid="select-risk-tolerance">
                   <SelectValue />
@@ -549,7 +554,11 @@ export default function StarterPortfolio() {
 
             {/* Monthly Contribution */}
             <div className="space-y-3">
-              <Label>Monthly Contribution (USD)</Label>
+              <Label>
+                <FinancialTerm term="dollar cost averaging">
+                  Monthly Contribution (USD)
+                </FinancialTerm>
+              </Label>
               <Input
                 type="number"
                 value={intake.monthlyContributionUsd}
@@ -573,7 +582,12 @@ export default function StarterPortfolio() {
 
             {/* Max Drawdown Comfort */}
             <div className="space-y-3">
-              <Label>Maximum Drawdown Comfort: {intake.maxDrawdownComfort}%</Label>
+              <Label>
+                <FinancialTerm term="maximum drawdown">
+                  Maximum Drawdown Comfort
+                </FinancialTerm>
+                : {intake.maxDrawdownComfort}%
+              </Label>
               <Slider
                 value={[intake.maxDrawdownComfort]}
                 onValueChange={([value]) => updateIntake("maxDrawdownComfort", value as 15 | 30 | 50)}
@@ -592,7 +606,12 @@ export default function StarterPortfolio() {
 
             {/* Stablecoin Buffer */}
             <div className="space-y-3">
-              <Label>Stablecoin Buffer: {intake.stablecoinBufferPct}%</Label>
+              <Label>
+                <FinancialTerm term="stablecoin">
+                  Stablecoin Buffer
+                </FinancialTerm>
+                : {intake.stablecoinBufferPct}%
+              </Label>
               <Slider
                 value={[intake.stablecoinBufferPct]}
                 onValueChange={([value]) => updateIntake("stablecoinBufferPct", value)}
@@ -700,10 +719,16 @@ export default function StarterPortfolio() {
 
             {/* Liquidity Requirements */}
             <div className="space-y-4">
-              <Label>Liquidity Requirements</Label>
+              <Label>
+                <FinancialTerm term="liquidity">
+                  Liquidity Requirements
+                </FinancialTerm>
+              </Label>
               <div className="space-y-3">
                 <div>
-                  <Label className="text-sm">Minimum Market Cap: ${(intake.liquidity.minMarketCapUsd / 1e9).toFixed(1)}B</Label>
+                  <Label className="text-sm">
+                    Minimum <FinancialTerm term="market cap">Market Cap</FinancialTerm>: ${(intake.liquidity.minMarketCapUsd / 1e9).toFixed(1)}B
+                  </Label>
                   <Slider
                     value={[intake.liquidity.minMarketCapUsd / 1e9]}
                     onValueChange={([value]) => updateIntake("liquidity", { 

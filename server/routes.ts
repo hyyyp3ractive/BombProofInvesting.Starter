@@ -642,6 +642,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Term Explanation route
+  app.post("/api/ai/explain-term", requireAuth(async (req: Request, res: Response, user: User) => {
+    try {
+      const { term } = req.body;
+      
+      if (!term) {
+        return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Term is required" } });
+      }
+      
+      const explanation = await aiService.explainTerm(term);
+      res.json(explanation);
+    } catch (error: any) {
+      console.error("Term explanation error:", error);
+      res.status(500).json({ error: { code: "EXPLANATION_ERROR", message: "Failed to explain term" } });
+    }
+  }));
+
   // Starter Portfolio routes
   app.post("/api/ai/starter-portfolio", requireAuth(async (req: Request, res: Response, user: User) => {
     try {
