@@ -536,6 +536,61 @@ export default function StarterPortfolio() {
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Theme Preference */}
+            <div className="space-y-3">
+              <Label>Choose Your Theme</Label>
+              <p className="text-xs text-muted-foreground">
+                Pick a look that feels right for you - you can always change it later!
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant={currentTheme === "midnight" ? "default" : "outline"}
+                  onClick={() => setCurrentTheme("midnight")}
+                  className="h-auto p-3 flex flex-col gap-1"
+                  data-testid="button-theme-midnight"
+                >
+                  <span className="text-lg">🌙</span>
+                  <span className="text-sm">Midnight</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={currentTheme === "flower" ? "default" : "outline"}
+                  onClick={() => setCurrentTheme("flower")}
+                  className="h-auto p-3 flex flex-col gap-1"
+                  data-testid="button-theme-flower"
+                >
+                  <span className="text-lg">🌸</span>
+                  <span className="text-sm">Flower Mode</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={currentTheme === "cozy" ? "default" : "outline"}
+                  onClick={() => setCurrentTheme("cozy")}
+                  className="h-auto p-3 flex flex-col gap-1"
+                  data-testid="button-theme-cozy"
+                >
+                  <span className="text-lg">☕</span>
+                  <span className="text-sm">Cozy</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={currentTheme === "high-contrast" ? "default" : "outline"}
+                  onClick={() => setCurrentTheme("high-contrast")}
+                  className="h-auto p-3 flex flex-col gap-1"
+                  data-testid="button-theme-high-contrast"
+                >
+                  <span className="text-lg">♿</span>
+                  <span className="text-sm">High Contrast</span>
+                </Button>
+              </div>
+              {currentTheme === "flower" && (
+                <div className="text-xs text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-900/20 p-2 rounded border">
+                  🌸 Perfect for new investors - warm and welcoming!
+                </div>
+              )}
+            </div>
+
             {/* Experience Level */}
             <div className="space-y-3">
               <Label>Experience Level</Label>
