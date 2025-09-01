@@ -8,6 +8,7 @@ import {
   TrendingUp,
   BarChart3,
   Settings,
+  Sparkles,
 } from "lucide-react";
 
 const navigationItems = [
@@ -46,6 +47,12 @@ const navigationItems = [
     icon: BarChart3,
     label: "Reports",
     testId: "nav-reports",
+  },
+  {
+    href: "/starter-portfolio",
+    icon: Sparkles,
+    label: "AI Portfolio",
+    testId: "nav-starter-portfolio",
   },
   {
     href: "/settings",

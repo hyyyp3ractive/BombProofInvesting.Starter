@@ -6,7 +6,8 @@ import * as schema from "@shared/schema";
 import type { 
   User, InsertUser, Session, WatchlistItem, InsertWatchlistItem, 
   Rating, InsertRating, Transaction, InsertTransaction, 
-  DcaPlan, InsertDcaPlan, AiEvaluation, InsertAiEvaluation
+  DcaPlan, InsertDcaPlan, AiEvaluation, InsertAiEvaluation,
+  StarterPortfolio, InsertStarterPortfolio, StarterPortfolioItem, InsertStarterPortfolioItem
 } from "@shared/schema";
 
 const client = postgres(config.DATABASE_URL);
@@ -75,6 +76,15 @@ export interface IStorage {
   getAiEvaluations(userId?: string, limit?: number): Promise<AiEvaluation[]>;
   createAiEvaluation(evaluation: InsertAiEvaluation): Promise<AiEvaluation>;
   updateAiEvaluation(id: string, updates: Partial<InsertAiEvaluation>): Promise<AiEvaluation | undefined>;
+  
+  // Starter Portfolios
+  getUserStarterPortfolios(userId: string): Promise<StarterPortfolio[]>;
+  getStarterPortfolio(userId: string, portfolioId: string): Promise<StarterPortfolio | undefined>;
+  getStarterPortfolioWithItems(userId: string, portfolioId: string): Promise<{ portfolio: StarterPortfolio; items: StarterPortfolioItem[] } | undefined>;
+  createStarterPortfolio(userId: string, portfolio: InsertStarterPortfolio): Promise<StarterPortfolio>;
+  createStarterPortfolioItems(items: InsertStarterPortfolioItem[]): Promise<StarterPortfolioItem[]>;
+  updateStarterPortfolio(userId: string, portfolioId: string, updates: Partial<InsertStarterPortfolio>): Promise<StarterPortfolio | undefined>;
+  deleteStarterPortfolio(userId: string, portfolioId: string): Promise<void>;
 }
 
 export class PostgresStorage implements IStorage {
@@ -368,6 +378,73 @@ export class PostgresStorage implements IStorage {
       .where(eq(schema.aiEvaluations.id, id))
       .returning();
     return result[0];
+  }
+  
+  // Starter Portfolios
+  async getUserStarterPortfolios(userId: string): Promise<StarterPortfolio[]> {
+    return db.select()
+      .from(schema.starterPortfolios)
+      .where(eq(schema.starterPortfolios.userId, userId))
+      .orderBy(desc(schema.starterPortfolios.createdAt));
+  }
+  
+  async getStarterPortfolio(userId: string, portfolioId: string): Promise<StarterPortfolio | undefined> {
+    const result = await db.select()
+      .from(schema.starterPortfolios)
+      .where(and(
+        eq(schema.starterPortfolios.userId, userId),
+        eq(schema.starterPortfolios.id, portfolioId)
+      ))
+      .limit(1);
+    return result[0];
+  }
+  
+  async getStarterPortfolioWithItems(userId: string, portfolioId: string): Promise<{ portfolio: StarterPortfolio; items: StarterPortfolioItem[] } | undefined> {
+    const portfolio = await this.getStarterPortfolio(userId, portfolioId);
+    if (!portfolio) return undefined;
+    
+    const items = await db.select()
+      .from(schema.starterPortfolioItems)
+      .where(eq(schema.starterPortfolioItems.portfolioId, portfolioId));
+    
+    return { portfolio, items };
+  }
+  
+  async createStarterPortfolio(userId: string, portfolio: InsertStarterPortfolio): Promise<StarterPortfolio> {
+    const result = await db.insert(schema.starterPortfolios)
+      .values({ ...portfolio, userId })
+      .returning();
+    return result[0];
+  }
+  
+  async createStarterPortfolioItems(items: InsertStarterPortfolioItem[]): Promise<StarterPortfolioItem[]> {
+    return db.insert(schema.starterPortfolioItems)
+      .values(items)
+      .returning();
+  }
+  
+  async updateStarterPortfolio(userId: string, portfolioId: string, updates: Partial<InsertStarterPortfolio>): Promise<StarterPortfolio | undefined> {
+    const result = await db.update(schema.starterPortfolios)
+      .set({ ...updates, updatedAt: Math.floor(Date.now() / 1000) })
+      .where(and(
+        eq(schema.starterPortfolios.userId, userId),
+        eq(schema.starterPortfolios.id, portfolioId)
+      ))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteStarterPortfolio(userId: string, portfolioId: string): Promise<void> {
+    // Delete items first
+    await db.delete(schema.starterPortfolioItems)
+      .where(eq(schema.starterPortfolioItems.portfolioId, portfolioId));
+    
+    // Delete portfolio
+    await db.delete(schema.starterPortfolios)
+      .where(and(
+        eq(schema.starterPortfolios.userId, userId),
+        eq(schema.starterPortfolios.id, portfolioId)
+      ));
   }
 }
 

@@ -111,6 +111,32 @@ export class ApiClient {
     const response = await this.makeRequest("GET", "/ai/evaluations/latest");
     return response.json();
   }
+  
+  // Starter Portfolio methods
+  async generateStarterPortfolio(intake: any) {
+    const response = await this.makeRequest("POST", "/ai/starter-portfolio", { intake });
+    return response.json();
+  }
+  
+  async saveStarterPortfolio(name: string, intake: any, portfolio: any) {
+    const response = await this.makeRequest("POST", "/ai/starter-portfolio/save", { name, intake, portfolio });
+    return response.json();
+  }
+  
+  async getStarterPortfolios() {
+    const response = await this.makeRequest("GET", "/starter-portfolios");
+    return response.json();
+  }
+  
+  async getStarterPortfolio(id: string) {
+    const response = await this.makeRequest("GET", `/starter-portfolios/${id}`);
+    return response.json();
+  }
+  
+  async deleteStarterPortfolio(id: string) {
+    const response = await this.makeRequest("DELETE", `/starter-portfolios/${id}`);
+    return response.json();
+  }
 
   // Watchlist methods
   async getWatchlist() {

@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { marketDataService } from "./services/market_data";
 import { aiService } from "./services/ai";
 import { riskScoringService } from "./services/risk_scoring";
+import { starterPortfolioService } from "./services/starter-portfolio";
 import { 
   hashPassword, verifyPassword, generateTokens, verifyAccessToken, 
   verifyRefreshToken, hashToken, extractBearerToken 
@@ -640,6 +641,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: { code: "SCORING_ERROR", message: "Failed to calculate risk score" } });
     }
   });
+
+  // Starter Portfolio routes
+  app.post("/api/ai/starter-portfolio", requireAuth(async (req: Request, res: Response, user: User) => {
+    try {
+      const { intake } = req.body;
+      
+      if (!intake) {
+        return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Intake data is required" } });
+      }
+      
+      const portfolio = await starterPortfolioService.generateStarterPortfolio(user.id, intake);
+      res.json(portfolio);
+    } catch (error: any) {
+      console.error("Starter portfolio generation error:", error);
+      res.status(500).json({ error: { code: "PORTFOLIO_ERROR", message: error.message || "Failed to generate portfolio" } });
+    }
+  }));
+  
+  app.post("/api/ai/starter-portfolio/save", requireAuth(async (req: Request, res: Response, user: User) => {
+    try {
+      const { name, intake, portfolio } = req.body;
+      
+      if (!name || !intake || !portfolio) {
+        return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Name, intake, and portfolio data are required" } });
+      }
+      
+      await starterPortfolioService.saveStarterPortfolio(user.id, name, intake, portfolio);
+      res.json({ message: "Portfolio saved successfully" });
+    } catch (error: any) {
+      console.error("Portfolio save error:", error);
+      res.status(500).json({ error: { code: "SAVE_ERROR", message: "Failed to save portfolio" } });
+    }
+  }));
+  
+  app.get("/api/starter-portfolios", requireAuth(async (req: Request, res: Response, user: User) => {
+    try {
+      const portfolios = await storage.getUserStarterPortfolios(user.id);
+      res.json(portfolios);
+    } catch (error: any) {
+      console.error("Get portfolios error:", error);
+      res.status(500).json({ error: { code: "FETCH_ERROR", message: "Failed to fetch portfolios" } });
+    }
+  }));
+  
+  app.get("/api/starter-portfolios/:id", requireAuth(async (req: Request, res: Response, user: User) => {
+    try {
+      const { id } = req.params;
+      const result = await storage.getStarterPortfolioWithItems(user.id, id);
+      
+      if (!result) {
+        return res.status(404).json({ error: { code: "NOT_FOUND", message: "Portfolio not found" } });
+      }
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("Get portfolio error:", error);
+      res.status(500).json({ error: { code: "FETCH_ERROR", message: "Failed to fetch portfolio" } });
+    }
+  }));
+  
+  app.delete("/api/starter-portfolios/:id", requireAuth(async (req: Request, res: Response, user: User) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteStarterPortfolio(user.id, id);
+      res.json({ message: "Portfolio deleted successfully" });
+    } catch (error: any) {
+      console.error("Delete portfolio error:", error);
+      res.status(500).json({ error: { code: "DELETE_ERROR", message: "Failed to delete portfolio" } });
+    }
+  }));
 
   // Provider health monitoring
   app.get("/api/health/providers", async (req: Request, res: Response) => {

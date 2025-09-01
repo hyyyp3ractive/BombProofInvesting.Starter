@@ -199,6 +199,57 @@ export const insertAiEvaluationSchema = createInsertSchema(aiEvaluations).pick({
   error: true,
 });
 
+// Starter Portfolio tables
+export const starterPortfolios = pgTable("starter_portfolios", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  createdAt: integer("created_at").notNull().default(sql`extract(epoch from now())`),
+  updatedAt: integer("updated_at").notNull().default(sql`extract(epoch from now())`),
+  name: varchar("name").notNull(),
+  intakeData: json("intake_data").notNull(), // Risk tolerance, horizon, etc.
+  policyData: json("policy_data").notNull(), // Core/satellite allocations, caps
+  status: varchar("status").notNull().default("active"), // active, archived
+  notes: text("notes"),
+});
+
+export const starterPortfolioItems = pgTable("starter_portfolio_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  portfolioId: varchar("portfolio_id").notNull(),
+  coinId: varchar("coin_id").notNull(),
+  symbol: varchar("symbol").notNull(),
+  name: varchar("name").notNull(),
+  role: varchar("role").notNull(), // core, satellite, stable
+  bucket: varchar("bucket").notNull(), // Low, Medium, High
+  allocationPct: real("allocation_pct").notNull(),
+  reasons: json("reasons").notNull(), // Array of strings
+  risks: json("risks").notNull(), // Array of strings
+  dcaAmountUsd: real("dca_amount_usd"),
+  dcaCadence: varchar("dca_cadence"), // Monthly, Weekly, etc.
+});
+
+export const insertStarterPortfolioSchema = createInsertSchema(starterPortfolios).pick({
+  userId: true,
+  name: true,
+  intakeData: true,
+  policyData: true,
+  status: true,
+  notes: true,
+});
+
+export const insertStarterPortfolioItemSchema = createInsertSchema(starterPortfolioItems).pick({
+  portfolioId: true,
+  coinId: true,
+  symbol: true,
+  name: true,
+  role: true,
+  bucket: true,
+  allocationPct: true,
+  reasons: true,
+  risks: true,
+  dcaAmountUsd: true,
+  dcaCadence: true,
+});
+
 // Register and login schemas
 export const registerSchema = z.object({
   email: z.string().email(),
@@ -224,6 +275,10 @@ export type DcaPlan = typeof dcaPlans.$inferSelect;
 export type InsertDcaPlan = z.infer<typeof insertDcaPlanSchema>;
 export type AiEvaluation = typeof aiEvaluations.$inferSelect;
 export type InsertAiEvaluation = z.infer<typeof insertAiEvaluationSchema>;
+export type StarterPortfolio = typeof starterPortfolios.$inferSelect;
+export type InsertStarterPortfolio = z.infer<typeof insertStarterPortfolioSchema>;
+export type StarterPortfolioItem = typeof starterPortfolioItems.$inferSelect;
+export type InsertStarterPortfolioItem = z.infer<typeof insertStarterPortfolioItemSchema>;
 
 // Market data types
 export type CoinSummary = {
