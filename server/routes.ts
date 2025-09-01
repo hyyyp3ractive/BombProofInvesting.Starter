@@ -40,6 +40,27 @@ function requireAuth(handler: (req: Request, res: Response, user: User) => Promi
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Create dev user for development bypass (only in dev mode)
+  if (config.APP_ENV === "development") {
+    try {
+      const devEmail = "dev@example.com";
+      const existingDevUser = await storage.getUserByEmail(devEmail);
+      
+      if (!existingDevUser) {
+        const passwordHash = hashPassword("dev123456");
+        await storage.createUser({ 
+          email: devEmail, 
+          passwordHash,
+          role: "user",
+          emailVerified: true,
+        });
+        console.log("🚀 Dev user created: dev@example.com / dev123456");
+      }
+    } catch (error) {
+      console.error("Failed to create dev user:", error);
+    }
+  }
+
   // Auth routes
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {

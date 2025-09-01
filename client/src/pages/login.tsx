@@ -113,6 +113,22 @@ export default function Login() {
             </Button>
           </form>
 
+          {/* Dev Mode Login Bypass */}
+          {import.meta.env.DEV && (
+            <div className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => login({ email: "dev@example.com", password: "dev123456" })}
+                disabled={isLoggingIn}
+                data-testid="button-dev-login"
+              >
+                🚀 Dev Login Bypass
+              </Button>
+            </div>
+          )}
+
           <div className="mt-6 text-center space-y-4">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
