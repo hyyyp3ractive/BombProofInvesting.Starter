@@ -524,7 +524,7 @@ class MessariProvider implements MarketDataProvider {
   name = "Messari";
   private client = new HttpClient();
   private config: ProviderConfig = {
-    baseUrl: "https://data.messari.io/api/v1",
+    baseUrl: "https://api.messari.io/ai/v1",
     apiKey: process.env.MESSARI_API_KEY,
     rateLimit: 20, // 20 calls per minute for free tier
     timeout: 30000,
@@ -627,8 +627,20 @@ class MessariProvider implements MarketDataProvider {
   
   async isHealthy(): Promise<boolean> {
     try {
-      const url = this.buildUrl("/assets");
-      const response = await this.client.fetchWithRetry(url, { headers: this.getHeaders() }, { ...this.config, timeout: 5000 });
+      const url = this.buildUrl("/chat/completions");
+      const headers = { 
+        ...this.getHeaders(), 
+        'Content-Type': 'application/json' 
+      };
+      const body = JSON.stringify({
+        messages: [{ role: "user", content: "Test" }],
+        stream: false
+      });
+      const response = await this.client.fetchWithRetry(url, { 
+        method: 'POST',
+        headers, 
+        body 
+      }, { ...this.config, timeout: 10000 });
       return response.ok;
     } catch {
       return false;
@@ -648,7 +660,7 @@ class MarketDataService {
       new CoinGeckoProvider(),
       new CryptoComProvider(),
       new CoinMarketCapProvider(),
-      new MessariProvider(),
+      // new MessariProvider(), // Messari has moved to AI chat service, no longer provides market data
     ];
     
     // Check provider health every 5 minutes
