@@ -361,6 +361,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // AI Evaluation routes
+  app.post("/api/ai/evaluate", requireAuth(async (req: Request, res: Response, user: User) => {
+    try {
+      const { aiEvaluator } = await import("./services/ai-evaluator");
+      
+      // Check if there's a recent evaluation (within last hour)
+      const latestEval = await storage.getLatestAiEvaluation(user.id);
+      if (latestEval) {
+        const hourAgo = Date.now() / 1000 - 3600;
+        if (latestEval.createdAt > hourAgo && latestEval.status === "completed") {
+          return res.status(429).json({ 
+            error: { 
+              code: "RATE_LIMITED", 
+              message: "Please wait at least 1 hour between evaluations" 
+            } 
+          });
+        }
+      }
+      
+      // Run evaluation asynchronously
+      aiEvaluator.runEvaluation(user.id, "manual").catch(error => {
+        console.error("Background evaluation failed:", error);
+      });
+      
+      res.json({ 
+        message: "Evaluation started", 
+        status: "processing" 
+      });
+    } catch (error: any) {
+      console.error("AI evaluation error:", error);
+      res.status(500).json({ 
+        error: { 
+          code: "EVALUATION_ERROR", 
+          message: "Failed to start evaluation" 
+        } 
+      });
+    }
+  }));
+  
+  app.get("/api/ai/evaluations", requireAuth(async (req: Request, res: Response, user: User) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const evaluations = await storage.getAiEvaluations(user.id, limit);
+      res.json(evaluations);
+    } catch (error: any) {
+      console.error("Failed to fetch evaluations:", error);
+      res.status(500).json({ 
+        error: { 
+          code: "FETCH_ERROR", 
+          message: "Failed to fetch evaluations" 
+        } 
+      });
+    }
+  }));
+  
+  app.get("/api/ai/evaluations/latest", requireAuth(async (req: Request, res: Response, user: User) => {
+    try {
+      const evaluation = await storage.getLatestAiEvaluation(user.id);
+      if (!evaluation) {
+        return res.status(404).json({ 
+          error: { 
+            code: "NOT_FOUND", 
+            message: "No evaluations found" 
+          } 
+        });
+      }
+      res.json(evaluation);
+    } catch (error: any) {
+      console.error("Failed to fetch latest evaluation:", error);
+      res.status(500).json({ 
+        error: { 
+          code: "FETCH_ERROR", 
+          message: "Failed to fetch latest evaluation" 
+        } 
+      });
+    }
+  }));
+  
   // AI routes
   app.get("/api/ai/explain", async (req: Request, res: Response) => {
     try {

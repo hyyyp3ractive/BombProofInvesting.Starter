@@ -1,0 +1,40 @@
+Awesome—bi-daily AI evaluations are totally doable. Here’s a clean blueprint that plugs into your current stack (Groq + FastAPI + APScheduler + your DB), plus a ready-to-use module you can hand to Replit AI.
+
+[Download: Bi-Daily AI Evaluation Module (.txt)](sandbox:/mnt/data/bi_daily_ai_evaluation_module.txt)
+
+## How it works (quick tour)
+
+1. **Scheduler (twice daily):** APScheduler triggers at **09:00** and **18:00** in **America/Los\_Angeles**.
+2. **Data refresh + features:** Pull latest markets, recompute scores/buckets/liquidity, deltas (24h/7d), risk flags, portfolio drift & DCA activity.
+3. **Grounded AI call (Groq 70B):** We pass a **compact JSONL candidate set** (up to \~120 assets) + **constraints** into Groq. The system prompt enforces “use only provided data,” no hype, and **STRICT JSON** output.
+4. **Validation + storage:** Parse/validate JSON; persist to `ai_evaluations` (+ optional `ai_eval_picks`). Keep diagnostics (token usage, filters) and a human-readable markdown summary.
+5. **Delivery:** Show it on the **Reports** page (latest run + history + diffs). Optionally **push iOS alerts** (“AI report ready”) using the APNs service we outlined earlier.
+6. **Manual run:** `POST /api/ai/evaluate` lets you trigger on-demand (useful for testing).
+
+## What you’ll add
+
+* **ENV:** `TIMEZONE=America/Los_Angeles`, `AI_EVAL_SCHEDULE_CRON=0 9,18 * * *`, `AI_EVAL_MAX_TOKENS`, `AI_EVAL_TEMPERATURE`.
+* **DB tables:** `ai_evaluations` (+ optional `ai_eval_picks`).
+* **Service code:** `services/ai_eval.py` to assemble context, call Groq, validate, and persist.
+* **Scheduler:** `scheduler.py` with CronTrigger; started on FastAPI startup.
+* **Endpoint:** `POST /api/ai/evaluate` to run now.
+* **UI:** “AI Bi-Daily” card on Reports page + history view with **what changed** since last run.
+
+## Enhanced reasoning (the “smarts” it uses)
+
+* **Risk/Reward framework** (your weights) + **bucket changes**
+* **Liquidity health:** vol/mcap floor; exchange coverage
+* **Momentum guard:** simple 90-day SMA slope check (boolean)
+* **Score deltas:** 7d/30d movement; stability vs. spikes
+* **Portfolio context:** drift vs targets; DCA executions since last report
+* **Risk flags:** regulatory/exploit/news tags you maintain
+* **Constraints:** objective (growth/balance/preservation), max picks, allocation sum ≈ 100%
+
+## Safety & cost
+
+* Strict JSON schema with one retry on parse failure.
+* Token budget capped; **compact context** (numbers over prose).
+* Cache inputs hash; don’t re-run if nothing changed materially.
+* Always render a **“Not financial advice”** banner.
+
+If you want, I can also generate the **FastAPI router + Alembic migration** and a **Reports page React component** wired to this output so you can paste them straight in.

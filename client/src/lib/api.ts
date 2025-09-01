@@ -95,6 +95,22 @@ export class ApiClient {
     const response = await this.makeRequest("GET", `/ai/compare?coins=${coinIds.join(",")}`);
     return response.json();
   }
+  
+  // AI Evaluation methods
+  async runAiEvaluation() {
+    const response = await this.makeRequest("POST", "/ai/evaluate");
+    return response.json();
+  }
+  
+  async getAiEvaluations(limit: number = 10) {
+    const response = await this.makeRequest("GET", `/ai/evaluations?limit=${limit}`);
+    return response.json();
+  }
+  
+  async getLatestAiEvaluation() {
+    const response = await this.makeRequest("GET", "/ai/evaluations/latest");
+    return response.json();
+  }
 
   // Watchlist methods
   async getWatchlist() {

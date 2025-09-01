@@ -119,6 +119,23 @@ export const httpCache = pgTable("http_cache", {
   expiresAt: integer("expires_at").notNull(),
 });
 
+// AI Evaluations - bi-daily automated crypto analysis
+export const aiEvaluations = pgTable("ai_evaluations", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+  runType: text("run_type").notNull(), // 'scheduled', 'manual'
+  status: text("status").notNull(), // 'pending', 'processing', 'completed', 'failed'
+  evaluationData: json("evaluation_data").notNull(), // Full evaluation results
+  picks: json("picks").notNull(), // Array of recommended picks with allocations
+  summary: text("summary"), // Human-readable summary
+  metadata: json("metadata"), // Token usage, processing time, etc.
+  error: text("error"), // Error message if failed
+  createdAt: integer("created_at").default(sql`extract(epoch from now())`).notNull(),
+}, (table) => ({
+  userIdIdx: index("ai_evaluations_user_id_idx").on(table.userId),
+  createdAtIdx: index("ai_evaluations_created_at_idx").on(table.createdAt),
+}));
+
 // AI Cache for explanations
 export const aiCache = pgTable("ai_cache", {
   key: text("key").primaryKey(),
@@ -171,6 +188,17 @@ export const insertDcaPlanSchema = createInsertSchema(dcaPlans).pick({
   active: true,
 });
 
+export const insertAiEvaluationSchema = createInsertSchema(aiEvaluations).pick({
+  userId: true,
+  runType: true,
+  status: true,
+  evaluationData: true,
+  picks: true,
+  summary: true,
+  metadata: true,
+  error: true,
+});
+
 // Register and login schemas
 export const registerSchema = z.object({
   email: z.string().email(),
@@ -194,6 +222,8 @@ export type Transaction = typeof transactions.$inferSelect;
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type DcaPlan = typeof dcaPlans.$inferSelect;
 export type InsertDcaPlan = z.infer<typeof insertDcaPlanSchema>;
+export type AiEvaluation = typeof aiEvaluations.$inferSelect;
+export type InsertAiEvaluation = z.infer<typeof insertAiEvaluationSchema>;
 
 // Market data types
 export type CoinSummary = {

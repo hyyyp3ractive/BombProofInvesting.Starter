@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   TrendingUp, 
@@ -13,8 +14,13 @@ import {
   Target,
   AlertCircle,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Sparkles,
+  RefreshCw,
+  Brain,
+  Clock
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -46,6 +52,7 @@ interface TransactionSummary {
 }
 
 export default function Reports() {
+  const { toast } = useToast();
   const [timeRange, setTimeRange] = useState("all");
 
   // Fetch data
@@ -64,6 +71,34 @@ export default function Reports() {
 
   const { data: ratings = [] } = useQuery<any[]>({
     queryKey: ["/api/ratings"],
+  });
+  
+  // AI Evaluation data
+  const { data: latestEvaluation, isLoading: evaluationLoading, refetch: refetchEvaluation } = useQuery({
+    queryKey: ["/api/ai/evaluations/latest"],
+    queryFn: () => apiClient.getLatestAiEvaluation(),
+    retry: false,
+  });
+  
+  const runEvaluationMutation = useMutation({
+    mutationFn: () => apiClient.runAiEvaluation(),
+    onSuccess: (data) => {
+      toast({
+        title: "AI Evaluation Started",
+        description: "The AI is analyzing the market. This may take a minute.",
+      });
+      // Poll for results after a delay
+      setTimeout(() => {
+        refetchEvaluation();
+      }, 5000);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Evaluation Failed",
+        description: error.message || "Could not start AI evaluation",
+        variant: "destructive",
+      });
+    },
   });
 
   // Filter transactions by time range
@@ -310,6 +345,125 @@ export default function Reports() {
           </SelectContent>
         </Select>
       </div>
+
+      {/* AI Evaluation Section */}
+      <Card className="border-primary/20">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center">
+              <Brain className="w-5 h-5 mr-2 text-primary" />
+              AI Market Evaluation
+            </CardTitle>
+            <Button
+              onClick={() => runEvaluationMutation.mutate()}
+              disabled={runEvaluationMutation.isPending}
+              size="sm"
+              data-testid="button-run-evaluation"
+            >
+              {runEvaluationMutation.isPending ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Running...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Run Analysis
+                </>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {evaluationLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            </div>
+          ) : latestEvaluation && latestEvaluation.status === "completed" ? (
+            <div className="space-y-4">
+              {/* AI Picks */}
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">AI Recommended Portfolio</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {(latestEvaluation.picks as any[])?.slice(0, 6).map((pick: any, index: number) => (
+                    <div 
+                      key={pick.coinId} 
+                      className="p-3 bg-muted/20 rounded-lg border border-border/50"
+                      data-testid={`ai-pick-${pick.coinId}`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium">{pick.symbol?.toUpperCase() || pick.coinId}</span>
+                        <span className="text-lg font-bold text-primary">{pick.allocation}%</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">{pick.reasoning}</p>
+                      <div className="flex items-center justify-between text-xs">
+                        <span>Risk: {pick.riskScore}/10</span>
+                        <span className="text-green-400">{pick.expectedReturn}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Summary */}
+              {latestEvaluation.summary && (
+                <div className="p-4 bg-muted/10 rounded-lg">
+                  <p className="text-sm">{latestEvaluation.summary}</p>
+                </div>
+              )}
+              
+              {/* Metadata */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center">
+                  <Clock className="w-3 h-3 mr-1" />
+                  Last updated: {new Date(latestEvaluation.createdAt * 1000).toLocaleString()}
+                </div>
+                {(latestEvaluation.metadata as any)?.marketCondition && (
+                  <span className="px-2 py-1 bg-primary/10 text-primary rounded-full">
+                    Market: {(latestEvaluation.metadata as any).marketCondition}
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : latestEvaluation && latestEvaluation.status === "processing" ? (
+            <div className="text-center py-8">
+              <RefreshCw className="w-8 h-8 text-primary animate-spin mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">AI is analyzing the market...</p>
+              <p className="text-xs text-muted-foreground mt-1">This may take up to a minute</p>
+            </div>
+          ) : latestEvaluation && latestEvaluation.status === "failed" ? (
+            <div className="text-center py-8">
+              <AlertCircle className="w-8 h-8 text-destructive mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">Evaluation failed</p>
+              <p className="text-xs text-destructive mt-1">{latestEvaluation.error}</p>
+              <Button 
+                onClick={() => runEvaluationMutation.mutate()} 
+                size="sm" 
+                className="mt-4"
+                variant="outline"
+              >
+                Try Again
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Brain className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">No AI evaluation available</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Run an AI analysis to get personalized crypto recommendations
+              </p>
+              <Button 
+                onClick={() => runEvaluationMutation.mutate()} 
+                size="sm" 
+                className="mt-4"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Start Analysis
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Portfolio Performance Section */}
       <div className="space-y-4">

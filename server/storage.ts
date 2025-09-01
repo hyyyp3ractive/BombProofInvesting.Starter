@@ -6,7 +6,7 @@ import * as schema from "@shared/schema";
 import type { 
   User, InsertUser, Session, WatchlistItem, InsertWatchlistItem, 
   Rating, InsertRating, Transaction, InsertTransaction, 
-  DcaPlan, InsertDcaPlan 
+  DcaPlan, InsertDcaPlan, AiEvaluation, InsertAiEvaluation
 } from "@shared/schema";
 
 const client = postgres(config.DATABASE_URL);
@@ -69,6 +69,12 @@ export interface IStorage {
   setCacheItem(key: string, value: any, expiresAt: number): Promise<void>;
   getAiCache(key: string): Promise<string | undefined>;
   setAiCache(key: string, value: string, expiresAt: number): Promise<void>;
+  
+  // AI Evaluations
+  getLatestAiEvaluation(userId?: string): Promise<AiEvaluation | undefined>;
+  getAiEvaluations(userId?: string, limit?: number): Promise<AiEvaluation[]>;
+  createAiEvaluation(evaluation: InsertAiEvaluation): Promise<AiEvaluation>;
+  updateAiEvaluation(id: string, updates: Partial<InsertAiEvaluation>): Promise<AiEvaluation | undefined>;
 }
 
 export class PostgresStorage implements IStorage {
@@ -325,6 +331,43 @@ export class PostgresStorage implements IStorage {
         target: schema.aiCache.key,
         set: { value, expiresAt }
       });
+  }
+  
+  // AI Evaluations
+  async getLatestAiEvaluation(userId?: string): Promise<AiEvaluation | undefined> {
+    const query = userId 
+      ? db.select().from(schema.aiEvaluations).where(eq(schema.aiEvaluations.userId, userId))
+      : db.select().from(schema.aiEvaluations).where(sql`${schema.aiEvaluations.userId} IS NULL`);
+    
+    const result = await query
+      .orderBy(desc(schema.aiEvaluations.createdAt))
+      .limit(1);
+    return result[0];
+  }
+  
+  async getAiEvaluations(userId?: string, limit: number = 10): Promise<AiEvaluation[]> {
+    const query = userId 
+      ? db.select().from(schema.aiEvaluations).where(eq(schema.aiEvaluations.userId, userId))
+      : db.select().from(schema.aiEvaluations).where(sql`${schema.aiEvaluations.userId} IS NULL`);
+    
+    return query
+      .orderBy(desc(schema.aiEvaluations.createdAt))
+      .limit(limit);
+  }
+  
+  async createAiEvaluation(evaluation: InsertAiEvaluation): Promise<AiEvaluation> {
+    const result = await db.insert(schema.aiEvaluations)
+      .values(evaluation)
+      .returning();
+    return result[0];
+  }
+  
+  async updateAiEvaluation(id: string, updates: Partial<InsertAiEvaluation>): Promise<AiEvaluation | undefined> {
+    const result = await db.update(schema.aiEvaluations)
+      .set(updates)
+      .where(eq(schema.aiEvaluations.id, id))
+      .returning();
+    return result[0];
   }
 }
 

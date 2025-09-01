@@ -38,7 +38,7 @@ class AIService {
     await new Promise(resolve => setTimeout(resolve, timeToWait));
   }
   
-  private async chat(messages: ChatMessage[]): Promise<string> {
+  async chat(messages: ChatMessage[]): Promise<string> {
     if (!this.isEnabled()) {
       throw new Error("AI features are disabled - GROQ_API_KEY not configured");
     }

@@ -1,0 +1,264 @@
+AI Starter Portfolio Module — Risk‑Based Intake → Portfolio & DCA Plan
+For: Crypto Evaluator + Simulator (FastAPI, React, Groq)
+
+Goal
+----
+Given a short user intake (risk tolerance, horizon, contribution), generate a grounded, explainable **starter portfolio** with allocations, DCA plans, and guardrails — using ONLY your app’s normalized data (scores, buckets, liquidity, flags). Output strict JSON, validate, save, and (optionally) instantiate a **Paper Trading** portfolio for practice.
+
+Overview
+--------
+1) **Intake form** → risk profile + constraints
+2) **Deterministic core** allocation rules (BTC/ETH; optional stablecoin buffer)
+3) **AI‑selected satellites** from filtered candidates (respecting bucket caps, liquidity, exclusions)
+4) **Validation & normalization** (allocation sum ≈ 100%, caps enforced)
+5) **DCA plan generation** per asset + rebalance policy
+6) **Persistence** and “Create Sim Portfolio” one‑click
+
+A) Intake Form (frontend)
+-------------------------
+Fields (store in `starter_intakes` table or user profile):
+- Experience: Beginner | Intermediate | Advanced
+- **Risk tolerance**: Conservative | Balanced | Aggressive
+- Investment horizon: Short (≤1y) | Medium (1–3y) | Long (3y+)
+- Max drawdown comfort: 15% | 30% | 50%+
+- Monthly contribution (USD): number
+- Initial lump sum (USD): number (optional)
+- Preferred categories (multi‑select): L1, L2/Scaling, DeFi, Infra/Data, AI, RWA, Privacy, Gaming, Meme, Stable
+- Exclusions (tickers/categories)
+- Liquidity floor: min market cap (e.g., $1B) and min vol/mcap (e.g., 0.5%)
+- # Holdings target range: e.g., 8–12
+- Rebalance preference: Quarterly | Semiannual | Annual
+- Stablecoin buffer: 0–20% (slider)
+- Region/Regulatory exclusions (manual flag list)
+- “Practice mode only” (don’t suggest real allocation amounts)
+
+B) Risk Profiles → Default Policy Map
+-------------------------------------
+Define defaults (editable under Settings). Percentages are **targets** before user edits.
+
+**Conservative**
+- Core (safer): 70–80%  → BTC 45–55%, ETH 20–30%
+- Stablecoin buffer: 10–20% (USDC)
+- Satellites: 10–20% from **Low/Medium** buckets only, Liquidity rank ≤ 100
+- Caps: per‑asset ≤ 25%; per High bucket = 0%; per category ≤ 35%
+- Holdings: 6–10
+
+**Balanced**
+- Core: 50–60% → BTC 30–40%, ETH 18–25%
+- Stablecoin buffer: 0–10%
+- Satellites: 35–45% from Low/Medium (+ optional ≤10% High), Liquidity rank ≤ 200
+- Caps: per‑asset ≤ 15%; High bucket ≤ 15%; category ≤ 40%
+- Holdings: 8–12
+
+**Aggressive**
+- Core: 35–45% → BTC 20–28%, ETH 14–20%
+- Stablecoin buffer: 0–5%
+- Satellites: 50–60% including **High** bucket allowed (≤30%), Liquidity rank ≤ 300
+- Caps: per‑asset ≤ 12%; High bucket ≤ 30%; category ≤ 45%
+- Holdings: 10–16
+
+C) API — Request/Response
+-------------------------
+Endpoint: **POST /api/ai/starter-portfolio**
+
+Request JSON:
+{
+  "intake": {
+    "risk_tolerance": "Balanced",
+    "horizon": "3y+",
+    "monthly_contribution_usd": 500,
+    "initial_lump_sum_usd": 1000,
+    "preferred_categories": ["L1","L2/Scaling","DeFi"],
+    "exclusions": {"coins": ["DOGE"], "categories": ["Meme"]},
+    "liquidity": {"min_mcap_usd": 1000000000, "min_vol_to_mcap": 0.005},
+    "holdings_range": [8, 12],
+    "rebalance": "Quarterly",
+    "stablecoin_buffer_pct": 5
+  }
+}
+
+Response JSON (STRICT schema):
+{
+  "policy": {
+    "risk_tolerance": "Balanced",
+    "core_target_pct": 0.55,
+    "btc_target_pct": 0.34,
+    "eth_target_pct": 0.21,
+    "stable_buffer_pct": 0.05,
+    "satellite_target_pct": 0.40,
+    "bucket_caps": {"High": 0.15, "Medium": 0.60, "Low": 1.0},
+    "per_asset_cap_pct": 0.15,
+    "per_category_cap_pct": 0.40,
+    "holdings_target_range": [8,12],
+    "rebalance": "Quarterly"
+  },
+  "allocation": [
+    {
+      "coin_id": "bitcoin",
+      "symbol": "BTC",
+      "name": "Bitcoin",
+      "role": "core",
+      "bucket": "Low",
+      "allocation_pct": 0.34,
+      "reasons": ["Monetary blue‑chip, highest liquidity"],
+      "risks": ["Macro sensitivity"],
+      "dca": {"amount_usd": 250, "cadence": "Monthly"}
+    },
+    {
+      "coin_id": "ethereum",
+      "symbol": "ETH",
+      "name": "Ethereum",
+      "role": "core",
+      "bucket": "Medium",
+      "allocation_pct": 0.21,
+      "reasons": ["Smart‑contract platform, ecosystem breadth"],
+      "risks": ["L2 competition, fee cyclicality"],
+      "dca": {"amount_usd": 150, "cadence": "Monthly"}
+    },
+    {
+      "coin_id": "usd-coin",
+      "symbol": "USDC",
+      "name": "USD Coin",
+      "role": "stable",
+      "bucket": "Low",
+      "allocation_pct": 0.05,
+      "reasons": ["Dry powder for dips, lower volatility"],
+      "risks": ["Custodial/issuer risk"],
+      "dca": {"amount_usd": 25, "cadence": "Monthly"}
+    },
+    {
+      "coin_id": "solana",
+      "symbol": "SOL",
+      "name": "Solana",
+      "role": "satellite",
+      "bucket": "Medium",
+      "allocation_pct": 0.12,
+      "reasons": ["High throughput L1, strong ecosystem momentum"],
+      "risks": ["Throughput‑linked outages past risk, competition"],
+      "dca": {"amount_usd": 40, "cadence": "Monthly"}
+    }
+    // ...more satellites until target range & caps met...
+  ],
+  "guardrails": {
+    "max_drawdown_alert_pct": 0.30,
+    "rebalance_threshold_pct": 0.05,
+    "min_liquidity_vol_to_mcap": 0.005,
+    "exclude_flags": ["Regulatory","Exploit","Quarantine"]
+  },
+  "notes": "This is an educational starter allocation derived from app data. Not financial advice.",
+  "checklist": [
+    "Enable price and % change alerts on core and largest satellites",
+    "Set DCA autopay date to 2–3 days after income",
+    "Review quarterly: drift, bucket changes, score deltas",
+    "Revisit risk tolerance after a −20% drawdown"
+  ]
+}
+
+D) Server Flow (FastAPI)
+------------------------
+1) Validate intake with Pydantic → normalize (e.g., range bounds, floors).
+2) Load policy defaults from Settings based on risk profile; merge user overrides.
+3) Build **candidate universe** from DB with constraints:
+   - Liquidity floor, category filter, bucket filter, exclusions
+   - Age ≥ 90 days; no critical flags
+4) **Deterministic core**: pre‑allocate BTC/ETH (and stable buffer if > 0).
+5) Ask **Groq** to select satellites from **CANDIDATE_DATA JSONL**:
+   - Provide strict system & user prompts; include bucket caps, per‑asset cap, per‑category cap, target holdings range.
+   - Request **STRICT JSON** only (list of satellites with allocation_pct, reasons, risks).
+6) Merge core + AI satellites → **normalize** to 100% after caps.
+7) Validate: per‑asset cap, bucket caps, holdings range; if violated → iteratively trim/renormalize.
+8) Compute **DCA plan** per asset from monthly contribution (proportional). Round to nearest $5.
+9) Persist to DB (starter_portfolios + items; or reuse sim_portfolios schema).
+10) Return JSON; optionally auto‑create a **Sim Portfolio** when `?create_sim=true`.
+
+E) Prompt Templates (server‑side)
+---------------------------------
+System:
+"You are a cautious, neutral crypto allocation assistant. Pick satellites ONLY from the provided CANDIDATE_DATA. Respect all caps, constraints, and target holdings. Prefer higher **total_score** and healthier **vol_to_mcap**. Do not include coins with flags. Return STRICT JSON only. No financial advice."
+
+User (example):
+"USER_INTAKE:\n{{intake_json}}\n\nPOLICY:\n{{policy_json}}\n\nCANDIDATE_DATA (JSONL):\n{{jsonl}}\n\nRESPONSE FORMAT — STRICT JSON ONLY:\n{ \"satellites\": [ {\"coin_id\":\"...\",\"symbol\":\"...\",\"name\":\"...\",\"bucket\":\"Low|Medium|High\",\"allocation_pct\":0.08,\"reasons\":[\"...\"],\"risks\":[\"...\"]} ] }"
+
+F) Validation Rules
+-------------------
+- Sum of allocations ≈ 1.0 (±0.01). Renormalize after caps.
+- Core+Stable fixed first; satellites fill remainder.
+- Per‑asset cap: clamp and redistribute excess to compliant assets by score.
+- Bucket caps: compute totals by bucket; clamp and redistribute to next‑best within caps.
+- Category caps: same as bucket caps.
+- Holdings count: if > max, drop lowest‑score satellites until within target; if < min, add next candidates (AI can return more than needed; you trim deterministically).
+- Exclusions always enforced (drop, renormalize).
+
+G) DB Tables (if not reusing sim_portfolios)
+--------------------------------------------
+starter_portfolios(id, user_id, created_at, intake_json, policy_json, notes)
+starter_portfolio_items(id, starter_id, coin_id, symbol, name, role, bucket, allocation_pct, reasons_json, risks_json)
+starter_dca_plans(id, starter_id, coin_id, amount_usd, cadence)
+
+H) Integration Hooks
+--------------------
+- **Create Sim Portfolio**: one click; copy allocations; allocate initial lump sum; set DCA schedules.
+- **Export**: CSV/JSON of allocations + DCA, and a printable IPS (Investment Policy Statement) summary.
+- **Alerts**: auto‑create price/% change alerts for core and top‑2 satellites.
+- **Regenerate**: allow users to tweak intake and re‑run (versioned history).
+
+I) Frontend UI (React)
+----------------------
+Page: **Starter Portfolio**
+- **Intake Panel** (left): risk, horizon, contributions, preferences, exclusions, liquidity floor, holdings range, rebalance, stable buffer.
+- **Preview Panel** (right): donut chart with Core/Satellite/Stable; table of allocations with bucket pills; DCA per asset; validation messages.
+- Buttons: [Generate with AI] [Save] [Create Sim Portfolio] [Export]
+- Banner: “Educational only — Not financial advice.”
+
+J) Testing
+----------
+- Unit: policy merge; allocation normalization; caps enforcement; DCA rounding.
+- Integration: mock Groq; ensure schema‑valid JSON; retry on invalid; exclusions enforced.
+- UI: intake validation; rendering; sim‑portfolio creation flow.
+
+K) Example Pydantic Models (backend/services/starter.py)
+--------------------------------------------------------
+class Intake(BaseModel):
+    risk_tolerance: Literal["Conservative","Balanced","Aggressive"]
+    horizon: str
+    monthly_contribution_usd: int
+    initial_lump_sum_usd: int | None = None
+    preferred_categories: list[str] = []
+    exclusions: dict = {"coins": [], "categories": []}
+    liquidity: dict = {"min_mcap_usd": 1_000_000_000, "min_vol_to_mcap": 0.005}
+    holdings_range: tuple[int,int] = (8,12)
+    rebalance: Literal["Quarterly","Semiannual","Annual"] = "Quarterly"
+    stablecoin_buffer_pct: float = 0.05
+
+class Policy(BaseModel):
+    core_target_pct: float
+    btc_target_pct: float
+    eth_target_pct: float
+    stable_buffer_pct: float
+    satellite_target_pct: float
+    bucket_caps: dict[str, float]
+    per_asset_cap_pct: float
+    per_category_cap_pct: float
+    holdings_target_range: tuple[int,int]
+    rebalance: str
+
+class AllocationItem(BaseModel):
+    coin_id: str; symbol: str; name: str; role: Literal["core","satellite","stable"]
+    bucket: Literal["Low","Medium","High"]; allocation_pct: float
+    reasons: list[str]; risks: list[str]
+    dca: dict
+
+class StarterResponse(BaseModel):
+    policy: Policy
+    allocation: conlist(AllocationItem, min_items=3)
+    guardrails: dict
+    notes: str
+    checklist: list[str]
+
+L) Safety
+---------
+- Ground the AI with server‑filtered candidates; never let it invent tickers.
+- Validate + clamp caps; keep exclusions; require stable buffer if intake demands.
+- Display “Not financial advice”; disable any trading until user explicitly opts into paper or read‑only exchange linking.
+
+End of Module
