@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { useAuth } from "@/hooks/use-auth";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { AppLayout } from "@/components/layout/app-layout";
+import { UIProvider } from "@/contexts/ui-context";
 
 // Pages
 import Dashboard from "@/pages/dashboard";
@@ -69,10 +70,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="dark">
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <UIProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </UIProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

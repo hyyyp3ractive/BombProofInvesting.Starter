@@ -3,7 +3,9 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* Default theme (Midnight Quartz) */
+:root,
+:root[data-theme="midnight"] {
   --background: hsl(207, 39%, 8%);       /* #0B0F14 */
   --foreground: hsl(210, 10%, 91%);      /* #E5E7EB */
   --card: hsl(214, 32%, 11%);            /* #111827 */
@@ -42,6 +44,169 @@
   --radius: 1rem;
   --font-sans: "Inter", "Open Sans", sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
+}
+
+/* Flower Mode - Warm and welcoming spring pastels */
+:root[data-theme="flower"] {
+  --background: hsl(316, 100%, 98%);      /* #FDF4FF rose-50 */
+  --foreground: hsl(25, 5%, 17%);         /* #292524 */
+  --card: hsl(244, 100%, 98%);           /* #F5F3FF indigo-50 */
+  --card-foreground: hsl(25, 5%, 17%);   /* #292524 */
+  --popover: hsl(244, 100%, 98%);        /* #F5F3FF */
+  --popover-foreground: hsl(25, 5%, 17%); /* #292524 */
+  --primary: hsl(330, 81%, 60%);         /* #EC4899 pink-500 */
+  --primary-foreground: hsl(0, 0%, 100%); /* #FFFFFF */
+  --secondary: hsl(316, 100%, 96%);      /* #FCE7F3 pink-100 */
+  --secondary-foreground: hsl(25, 5%, 17%); /* #292524 */
+  --muted: hsl(316, 100%, 94%);          /* #F9A8D4 pink-200 */
+  --muted-foreground: hsl(25, 5%, 45%);  /* #78716C */
+  --accent: hsl(244, 100%, 96%);         /* #EDE9FE indigo-100 */
+  --accent-foreground: hsl(25, 5%, 17%);  /* #292524 */
+  --destructive: hsl(351, 83%, 61%);     /* #F43F5E rose-500 */
+  --destructive-foreground: hsl(0, 0%, 100%); /* #FFFFFF */
+  --border: hsl(220, 13%, 91%);          /* #E5E7EB neutral-200 */
+  --input: hsl(220, 13%, 91%);           /* #E5E7EB */
+  --ring: hsl(330, 81%, 60%);            /* #EC4899 pink-500 */
+  --chart-1: hsl(330, 81%, 60%);         /* #EC4899 pink-500 */
+  --chart-2: hsl(142, 71%, 45%);         /* #22C55E green-500 */
+  --chart-3: hsl(45, 93%, 58%);          /* #EAB308 yellow-500 */
+  --chart-4: hsl(262, 83%, 58%);         /* #8B5CF6 violet-500 */
+  --chart-5: hsl(217, 91%, 60%);         /* #3B82F6 blue-500 */
+  --sidebar: hsl(244, 100%, 98%);        /* #F5F3FF */
+  --sidebar-foreground: hsl(25, 5%, 17%); /* #292524 */
+  --sidebar-primary: hsl(330, 81%, 60%);    /* #EC4899 */
+  --sidebar-primary-foreground: hsl(0, 0%, 100%); /* #FFFFFF */
+  --sidebar-accent: hsl(316, 100%, 96%);    /* #FCE7F3 */
+  --sidebar-accent-foreground: hsl(330, 81%, 60%); /* #EC4899 */
+  --sidebar-border: hsl(220, 13%, 91%);     /* #E5E7EB */
+  --sidebar-ring: hsl(330, 81%, 60%);       /* #EC4899 */
+  --success: hsl(142, 71%, 45%);         /* #22C55E green-500 */
+  --warning: hsl(45, 93%, 58%);          /* #EAB308 yellow-500 */
+  --danger: hsl(351, 83%, 61%);          /* #F43F5E rose-500 */
+}
+
+/* Optional soft background pattern for Flower Mode */
+:root[data-theme="flower"] body {
+  background-image:
+    radial-gradient(80px 80px at 20% 10%, hsla(330, 81%, 60%, 0.08), transparent),
+    radial-gradient(100px 100px at 80% 30%, hsla(262, 83%, 58%, 0.08), transparent),
+    radial-gradient(120px 120px at 30% 80%, hsla(142, 71%, 45%, 0.08), transparent);
+  background-repeat: no-repeat;
+}
+
+/* Cozy Mode - Warm and easy on the eyes */
+:root[data-theme="cozy"] {
+  --background: hsl(60, 9%, 98%);         /* #FAFAF9 stone-50 */
+  --foreground: hsl(24, 10%, 10%);       /* #1C1917 stone-900 */
+  --card: hsl(60, 9%, 96%);              /* #F5F5F4 stone-100 */
+  --card-foreground: hsl(24, 10%, 10%);  /* #1C1917 */
+  --popover: hsl(60, 9%, 96%);           /* #F5F5F4 */
+  --popover-foreground: hsl(24, 10%, 10%); /* #1C1917 */
+  --primary: hsl(20, 91%, 48%);          /* #EA580C orange-600 */
+  --primary-foreground: hsl(0, 0%, 100%); /* #FFFFFF */
+  --secondary: hsl(60, 9%, 94%);         /* #E7E5E4 stone-200 */
+  --secondary-foreground: hsl(24, 10%, 10%); /* #1C1917 */
+  --muted: hsl(60, 9%, 94%);             /* #E7E5E4 stone-200 */
+  --muted-foreground: hsl(25, 5%, 45%);  /* #78716C stone-500 */
+  --accent: hsl(60, 9%, 94%);            /* #E7E5E4 stone-200 */
+  --accent-foreground: hsl(24, 10%, 10%); /* #1C1917 */
+  --destructive: hsl(0, 84%, 37%);       /* #DC2626 red-600 */
+  --destructive-foreground: hsl(0, 0%, 100%); /* #FFFFFF */
+  --border: hsl(60, 9%, 91%);            /* #D6D3D1 stone-300 */
+  --input: hsl(60, 9%, 91%);             /* #D6D3D1 */
+  --ring: hsl(20, 91%, 48%);             /* #EA580C orange-600 */
+  --chart-1: hsl(20, 91%, 48%);          /* #EA580C orange-600 */
+  --chart-2: hsl(142, 76%, 36%);         /* #059669 emerald-600 */
+  --chart-3: hsl(32, 95%, 44%);          /* #D97706 amber-600 */
+  --chart-4: hsl(258, 90%, 66%);         /* #7C3AED violet-600 */
+  --chart-5: hsl(221, 83%, 53%);         /* #2563EB blue-600 */
+  --sidebar: hsl(60, 9%, 96%);           /* #F5F5F4 */
+  --sidebar-foreground: hsl(24, 10%, 10%); /* #1C1917 */
+  --sidebar-primary: hsl(20, 91%, 48%);     /* #EA580C */
+  --sidebar-primary-foreground: hsl(0, 0%, 100%); /* #FFFFFF */
+  --sidebar-accent: hsl(60, 9%, 94%);       /* #E7E5E4 */
+  --sidebar-accent-foreground: hsl(20, 91%, 48%); /* #EA580C */
+  --sidebar-border: hsl(60, 9%, 91%);       /* #D6D3D1 */
+  --sidebar-ring: hsl(20, 91%, 48%);        /* #EA580C */
+  --success: hsl(142, 76%, 36%);         /* #059669 emerald-600 */
+  --warning: hsl(32, 95%, 44%);          /* #D97706 amber-600 */
+  --danger: hsl(0, 84%, 37%);            /* #DC2626 red-600 */
+}
+
+/* High-Contrast Mode - Accessibility focused */
+:root[data-theme="high-contrast"] {
+  --background: hsl(0, 0%, 0%);           /* #000000 */
+  --foreground: hsl(0, 0%, 100%);        /* #FFFFFF */
+  --card: hsl(0, 0%, 7%);                /* #111111 */
+  --card-foreground: hsl(0, 0%, 100%);   /* #FFFFFF */
+  --popover: hsl(0, 0%, 7%);             /* #111111 */
+  --popover-foreground: hsl(0, 0%, 100%); /* #FFFFFF */
+  --primary: hsl(221, 83%, 53%);         /* #3B82F6 blue-500 */
+  --primary-foreground: hsl(0, 0%, 100%); /* #FFFFFF */
+  --secondary: hsl(0, 0%, 15%);          /* #262626 */
+  --secondary-foreground: hsl(0, 0%, 100%); /* #FFFFFF */
+  --muted: hsl(0, 0%, 15%);              /* #262626 */
+  --muted-foreground: hsl(0, 0%, 85%);   /* #D4D4D4 */
+  --accent: hsl(0, 0%, 15%);             /* #262626 */
+  --accent-foreground: hsl(0, 0%, 100%);  /* #FFFFFF */
+  --destructive: hsl(0, 72%, 51%);       /* #EF4444 red-500 */
+  --destructive-foreground: hsl(0, 0%, 100%); /* #FFFFFF */
+  --border: hsl(0, 0%, 100%);            /* #FFFFFF */
+  --input: hsl(0, 0%, 15%);              /* #262626 */
+  --ring: hsl(0, 0%, 100%);              /* #FFFFFF */
+  --chart-1: hsl(221, 83%, 53%);         /* #3B82F6 blue-500 */
+  --chart-2: hsl(142, 71%, 45%);         /* #22C55E green-500 */
+  --chart-3: hsl(45, 93%, 58%);          /* #EAB308 yellow-500 */
+  --chart-4: hsl(280, 100%, 70%);        /* #A855F7 purple-500 */
+  --chart-5: hsl(12, 76%, 61%);          /* #F97316 orange-500 */
+  --sidebar: hsl(0, 0%, 7%);             /* #111111 */
+  --sidebar-foreground: hsl(0, 0%, 100%); /* #FFFFFF */
+  --sidebar-primary: hsl(221, 83%, 53%);    /* #3B82F6 */
+  --sidebar-primary-foreground: hsl(0, 0%, 100%); /* #FFFFFF */
+  --sidebar-accent: hsl(0, 0%, 15%);        /* #262626 */
+  --sidebar-accent-foreground: hsl(221, 83%, 53%); /* #3B82F6 */
+  --sidebar-border: hsl(0, 0%, 100%);       /* #FFFFFF */
+  --sidebar-ring: hsl(0, 0%, 100%);         /* #FFFFFF */
+  --success: hsl(142, 71%, 45%);         /* #22C55E green-500 */
+  --warning: hsl(45, 93%, 58%);          /* #EAB308 yellow-500 */
+  --danger: hsl(0, 72%, 51%);            /* #EF4444 red-500 */
+}
+
+/* Beginner Mode styles - Friendlier UX */
+.beginner-mode .text-sm { 
+  font-size: 0.95rem; 
+  line-height: 1.5; 
+}
+
+.beginner-mode .btn, 
+.beginner-mode button { 
+  padding: 0.75rem 1rem; 
+  min-height: 44px; /* Better touch targets */
+}
+
+.beginner-mode .metric--advanced { 
+  display: none; 
+}
+
+.beginner-mode .text-xs {
+  font-size: 0.85rem;
+}
+
+.beginner-mode .leading-tight {
+  line-height: 1.4;
+}
+
+/* Flower Mode specific enhancements */
+:root[data-theme="flower"] .beginner-mode {
+  /* Softer focus states */
+}
+
+:root[data-theme="flower"] .beginner-mode .border-dotted {
+  border-color: hsl(330, 81%, 75%);
+}
+
+:root[data-theme="flower"] .beginner-mode .text-muted-foreground {
+  color: hsl(25, 5%, 55%);
 }
 
 .light {

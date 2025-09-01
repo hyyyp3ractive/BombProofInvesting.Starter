@@ -1,0 +1,222 @@
+Absolutely—let’s make the app feel warm and welcoming. Below is a drop-in plan to add **alternate themes** (including a playful **“Flower Mode”**) plus a **Beginner Mode** that softens jargon and trims the UI for new investors.
+
+# 1) Theme system (CSS variables + Tailwind + shadcn/ui)
+
+Use a `data-theme` attribute on `<html>` to swap CSS variables. Keep your existing tokens and add new sets.
+
+**themes.css**
+
+```css
+/* Base tokens used by Tailwind (shadcn/ui expects these) */
+:root {
+  --background:        11 15 20;
+  --foreground:        229 231 235;
+  --card:              17 24 39;
+  --muted-foreground:  156 163 175;
+  --primary:           34 211 238;
+  --ring:              34 211 238;
+  --border:            31 41 55;
+  --success:           16 185 129;
+  --warning:           245 158 11;
+  --danger:            239 68 68;
+}
+
+/* Default (existing) — Midnight Quartz */
+:root[data-theme="midnight"] {
+  --background: 11 15 20;
+  --card: 17 24 39;
+  --foreground: 229 231 235;
+  --primary: 34 211 238;  /* cyan */
+  --ring: 34 211 238;
+  --border: 31 41 55;
+  --success: 16 185 129;
+  --warning: 245 158 11;
+  --danger: 239 68 68;
+}
+
+/* NEW: Flower Mode (spring pastels, friendly) */
+:root[data-theme="flower"]{
+  /* Pastel base */
+  --background: 253 244 255;   /* #FDF4FF (rose-50) */
+  --card:       245 243 255;   /* #F5F3FF (indigo-50) */
+  --foreground: 41 37 36;      /* #292524 */
+  --primary:    236 72 153;    /* #EC4899 pink-500 */
+  --ring:       236 72 153;
+  --border:     229 231 235;   /* neutral-200 */
+  --success:    34 197 94;     /* green-500 */
+  --warning:    234 179 8;     /* yellow-500 */
+  --danger:     244 63 94;     /* rose-500 */
+}
+
+/* Optional soft background pattern for Flower Mode */
+[data-theme="flower"] body {
+  background-image:
+    radial-gradient(80px 80px at 20% 10%, rgba(236,72,153,0.10), transparent),
+    radial-gradient(100px 100px at 80% 30%, rgba(99,102,241,0.10), transparent),
+    radial-gradient(120px 120px at 30% 80%, rgba(16,185,129,0.10), transparent);
+  background-repeat: no-repeat;
+}
+
+/* NEW: Cozy Mode (warm/easy on eyes) */
+:root[data-theme="cozy"]{
+  --background: 250 250 249;  /* stone-50 */
+  --card:       245 245 244;  /* stone-100 */
+  --foreground: 28 25 23;     /* stone-900 */
+  --primary:    234 88 12;    /* orange-600 */
+  --ring:       234 88 12;
+  --border:     231 229 228;  /* stone-200 */
+  --success:    22 163 74;    /* green-600 */
+  --warning:    217 119 6;    /* amber-600 */
+  --danger:     220 38 38;    /* red-600 */
+}
+
+/* NEW: High-Contrast (accessibility-first) */
+:root[data-theme="high-contrast"]{
+  --background: 0 0 0;        /* #000 */
+  --card:       17 17 17;
+  --foreground: 255 255 255;  /* #fff */
+  --primary:    59 130 246;   /* blue-500 */
+  --ring:       255 255 255;
+  --border:     255 255 255;
+  --success:    34 197 94; 
+  --warning:    234 179 8;
+  --danger:     248 113 113;
+}
+```
+
+**Tailwind hook (tailwind.config.ts)**
+
+```ts
+theme: {
+  extend: {
+    colors: {
+      background: 'rgb(var(--background) / <alpha-value>)',
+      foreground: 'rgb(var(--foreground) / <alpha-value>)',
+      card: 'rgb(var(--card) / <alpha-value>)',
+      primary: 'rgb(var(--primary) / <alpha-value>)',
+      border: 'rgb(var(--border) / <alpha-value>)',
+      success: 'rgb(var(--success) / <alpha-value>)',
+      warning: 'rgb(var(--warning) / <alpha-value>)',
+      danger: 'rgb(var(--danger) / <alpha-value>)',
+    }
+  }
+}
+```
+
+# 2) Theme switcher (React)
+
+Persist selection and update `<html data-theme="...">`.
+
+```tsx
+// components/ThemeSwitcher.tsx
+import { useEffect, useState } from "react";
+
+const THEMES = [
+  { id: "midnight", label: "Midnight (default)" },
+  { id: "flower", label: "Flower Mode 🌸" },
+  { id: "cozy", label: "Cozy ☕" },
+  { id: "high-contrast", label: "High Contrast ♿" },
+];
+
+export default function ThemeSwitcher() {
+  const [theme, setTheme] = useState<string>(() => localStorage.getItem("theme") || "midnight");
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  return (
+    <div className="flex items-center gap-2">
+      <label className="text-sm">Theme</label>
+      <select
+        className="border rounded-md px-2 py-1 bg-card text-foreground"
+        value={theme}
+        onChange={(e) => setTheme(e.target.value)}
+      >
+        {THEMES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+      </select>
+    </div>
+  );
+}
+```
+
+Drop this into your **Topbar** (next to the AI toggle).
+
+# 3) “Beginner Mode” (friendlier UX on top of any theme)
+
+Toggle that simplifies the product for new investors.
+
+**What it does:**
+
+* **Simplify labels:**
+
+  * “Score” → “Overall Rating”
+  * Buckets: **Chill (Low)** / **Balanced (Med)** / **Spicy (High)**
+* **Hide expert metrics** behind a “Show Advanced” disclosure (Sharpe, Sortino, turnover, TE/IR).
+* **Bigger touch targets** and increased line-height.
+* **Plain-English tooltips** (e.g., “Liquidity: how easy it is to buy/sell without moving price.”)
+* **Default to DCA** and show “What is DCA?” inline explainer.
+* **Onboarding nudge**: “Try Flower Mode 🌸 if you like softer colors.”
+
+**Implementation (state + CSS class):**
+
+```tsx
+// store/ui.ts (or context)
+import { createContext, useContext, useState } from "react";
+const UIContext = createContext({ beginner: false, setBeginner: (v:boolean)=>{} });
+
+export function UIProvider({ children }: {children: React.ReactNode}) {
+  const [beginner, setBeginner] = useState<boolean>(() => localStorage.getItem("beginner")==="1");
+  return (
+    <UIContext.Provider value={{ beginner, setBeginner }}>
+      <div className={beginner ? "beginner-mode" : ""}>{children}</div>
+    </UIContext.Provider>
+  );
+}
+export const useUI = () => useContext(UIContext);
+```
+
+```css
+/* styles for beginner-mode */
+.beginner-mode .text-sm { font-size: 0.95rem; }     /* slightly larger */
+.beginner-mode .btn { padding: 0.75rem 1rem; }      /* bigger targets */
+.beginner-mode .metric--advanced { display: none; } /* hide advanced until expanded */
+```
+
+Add a simple toggle in Settings: “Beginner Mode (recommended for new investors)”.
+
+# 4) Friendly flourishes (optional, motion-aware)
+
+* **Milestone “bloom”** when a user saves their first rating or creates a DCA plan:
+
+  * Trigger a tiny confetti/petal burst; wrap with `@media (prefers-reduced-motion: reduce){ animation: none }`.
+* **Empty states** in Flower Mode with soft illustrations (“Your garden is empty — add a coin to watch it grow 🌱”).
+* **Success color language**: use **success** for “Green shoots 🌱” in Flower Mode.
+
+# 5) Copy & iconography
+
+* Keep tone encouraging: “You’re doing great—one step at a time.”
+* Replace scary words (“volatility”, “drawdown”) with subtitled helpers:
+
+  * “Ups & downs (volatility)”
+  * “Worst slide (max drawdown)”
+* Use friendly icons (sprout/leaf/flower) on actions like **Add to Watchlist**, **Start DCA**.
+
+# 6) Accessibility checklist
+
+* Verify **contrast** (especially Flower Mode’s pastels): aim for WCAG **AA**. If a button fails, bump text to a darker neutral (`--foreground` = 55–65% luminance).
+* Provide **High-Contrast** theme always available.
+* Respect **reduced motion** and **prefers-color-scheme** if you auto-select defaults.
+
+# 7) Quick wins to ship now
+
+* Add the CSS above and the **ThemeSwitcher**.
+* Create a **Settings → Appearance** section with:
+
+  * Theme select
+  * Beginner Mode toggle
+  * Font size: Normal / Larger
+* In **Coins** & **Coin Detail**, gate advanced metrics behind a disclosure if Beginner Mode is on.
+* Update empty states and tooltips with kinder language.
+
+If you want, I can package this as a **ready-to-import PR** (themes.css, ThemeSwitcher.tsx, UIProvider, and Settings panel stub) or generate a small “Flower assets” pack (SVG petals/backgrounds) you can drop in.

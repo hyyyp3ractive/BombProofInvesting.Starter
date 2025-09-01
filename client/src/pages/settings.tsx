@@ -26,6 +26,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useTheme } from "next-themes";
+import { useUI } from "@/contexts/ui-context";
+import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 import { 
   Settings as SettingsIcon,
   User,
@@ -40,7 +42,8 @@ import {
   Sun,
   Monitor,
   Mail,
-  Lock
+  Lock,
+  Sparkles
 } from "lucide-react";
 
 interface UserSettings {
@@ -65,6 +68,7 @@ interface UserSettings {
 export default function Settings() {
   const { user, updateSettings, logout } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { beginnerMode, setBeginnerMode } = useUI();
   const { toast } = useToast();
   
   const [settings, setSettings] = useState<UserSettings>({
@@ -225,11 +229,13 @@ export default function Settings() {
               <span>Appearance</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
+            <ThemeSwitcher />
+            
             <div className="space-y-2">
-              <Label>Theme</Label>
+              <Label>Legacy Theme Mode</Label>
               <Select value={theme} onValueChange={handleThemeChange}>
-                <SelectTrigger data-testid="select-theme">
+                <SelectTrigger data-testid="select-legacy-theme">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -253,6 +259,23 @@ export default function Settings() {
                   </SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                Note: Legacy mode is overridden by the theme selector above
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Beginner Mode</Label>
+                <p className="text-sm text-muted-foreground">
+                  Simplified interface with friendly language for new investors
+                </p>
+              </div>
+              <Switch
+                checked={beginnerMode}
+                onCheckedChange={setBeginnerMode}
+                data-testid="switch-beginner-mode"
+              />
             </div>
 
             <div className="space-y-2">

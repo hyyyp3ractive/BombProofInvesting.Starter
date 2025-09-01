@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FinancialTerm } from "@/components/ui/term-tooltip";
+import { useUI } from "@/contexts/ui-context";
 import { 
   Sparkles, 
   TrendingUp, 
@@ -27,7 +28,8 @@ import {
   Download,
   AlertTriangle,
   Brain,
-  RefreshCw
+  RefreshCw,
+  Flower
 } from "lucide-react";
 
 interface IntakeData {
@@ -78,6 +80,7 @@ const POPULAR_EXCLUSIONS = [
 
 export default function StarterPortfolio() {
   const { toast } = useToast();
+  const { beginnerMode, currentTheme } = useUI();
   const [currentStep, setCurrentStep] = useState<"intake" | "preview" | "saved">("intake");
   const [generatedPortfolio, setGeneratedPortfolio] = useState<any>(null);
   const [portfolioName, setPortfolioName] = useState("");
@@ -172,6 +175,17 @@ export default function StarterPortfolio() {
       case "Medium": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
       case "High": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       default: return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
+    }
+  };
+  
+  // Beginner-friendly bucket labels
+  const getFriendlyBucketLabel = (bucket: string) => {
+    if (!beginnerMode) return bucket;
+    switch (bucket) {
+      case "Low": return "Chill (Low Risk) 🌱";
+      case "Medium": return "Balanced (Medium Risk) ⚖️";
+      case "High": return "Spicy (High Risk) 🌶️";
+      default: return bucket;
     }
   };
 
@@ -484,13 +498,27 @@ export default function StarterPortfolio() {
       {/* Header */}
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold flex items-center justify-center">
-          <Sparkles className="w-8 h-8 mr-3 text-primary" />
-          AI Starter Portfolio
+          {currentTheme === "flower" ? (
+            <Flower className="w-8 h-8 mr-3 text-primary" />
+          ) : (
+            <Sparkles className="w-8 h-8 mr-3 text-primary" />
+          )}
+          {beginnerMode ? "Your Personal Crypto Garden 🌱" : "AI Starter Portfolio"}
         </h1>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          Get a personalized cryptocurrency portfolio recommendation based on your risk tolerance, 
-          investment horizon, and preferences. Built using sophisticated market analysis and AI insights.
+          {beginnerMode ? (
+            "Let's grow your first crypto portfolio together! Answer a few questions and we'll create a personalized plan just for you. No complicated terms - we'll explain everything in simple words."
+          ) : (
+            "Get a personalized cryptocurrency portfolio recommendation based on your risk tolerance, investment horizon, and preferences. Built using sophisticated market analysis and AI insights."
+          )}
         </p>
+        {beginnerMode && currentTheme === "flower" && (
+          <div className="bg-pink-50 dark:bg-pink-900/20 border border-pink-200 dark:border-pink-800 rounded-lg p-3 mt-4 max-w-md mx-auto">
+            <p className="text-sm text-pink-700 dark:text-pink-300 text-center">
+              🌸 Welcome to Flower Mode! We've made everything warm and friendly for new investors like you.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
@@ -530,9 +558,15 @@ export default function StarterPortfolio() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-background">
-                  <SelectItem value="Conservative">Conservative (Lower risk, stable returns)</SelectItem>
-                  <SelectItem value="Balanced">Balanced (Moderate risk, balanced growth)</SelectItem>
-                  <SelectItem value="Aggressive">Aggressive (Higher risk, growth potential)</SelectItem>
+                  <SelectItem value="Conservative">
+                    {beginnerMode ? "🌱 Chill (Play it safe, steady growth)" : "Conservative (Lower risk, stable returns)"}
+                  </SelectItem>
+                  <SelectItem value="Balanced">
+                    {beginnerMode ? "⚖️ Balanced (Some ups and downs, good growth)" : "Balanced (Moderate risk, balanced growth)"}
+                  </SelectItem>
+                  <SelectItem value="Aggressive">
+                    {beginnerMode ? "🌶️ Spicy (Big ups and downs, high growth potential)" : "Aggressive (Higher risk, growth potential)"}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -556,9 +590,14 @@ export default function StarterPortfolio() {
             <div className="space-y-3">
               <Label>
                 <FinancialTerm term="dollar cost averaging">
-                  Monthly Contribution (USD)
+                  {beginnerMode ? "How much do you want to invest each month?" : "Monthly Contribution (USD)"}
                 </FinancialTerm>
               </Label>
+              {beginnerMode && (
+                <p className="text-xs text-muted-foreground">
+                  💡 Tip: Investing the same amount each month helps smooth out price swings!
+                </p>
+              )}
               <Input
                 type="number"
                 value={intake.monthlyContributionUsd}
