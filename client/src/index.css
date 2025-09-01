@@ -85,8 +85,48 @@
   --danger: hsl(351, 83%, 61%);          /* #F43F5E rose-500 */
 }
 
+/* Light Mode - Clean professional light theme */
+:root[data-theme="light"] {
+  --background: hsl(0, 0%, 100%);        /* #FFFFFF */
+  --foreground: hsl(222, 84%, 5%);       /* #020817 */
+  --card: hsl(0, 0%, 100%);              /* #FFFFFF */
+  --card-foreground: hsl(222, 84%, 5%);  /* #020817 */
+  --popover: hsl(0, 0%, 100%);           /* #FFFFFF */
+  --popover-foreground: hsl(222, 84%, 5%); /* #020817 */
+  --primary: hsl(262, 83%, 58%);         /* #4F46E5 */
+  --primary-foreground: hsl(210, 40%, 98%); /* #F8FAFC */
+  --secondary: hsl(210, 40%, 96%);       /* #F1F5F9 */
+  --secondary-foreground: hsl(215, 25%, 27%); /* #334155 */
+  --muted: hsl(210, 40%, 96%);           /* #F1F5F9 */
+  --muted-foreground: hsl(215, 16%, 47%); /* #64748B */
+  --accent: hsl(210, 40%, 96%);          /* #F1F5F9 */
+  --accent-foreground: hsl(222, 84%, 5%); /* #020817 */
+  --destructive: hsl(0, 84%, 60%);       /* #EF4444 */
+  --destructive-foreground: hsl(210, 40%, 98%); /* #F8FAFC */
+  --border: hsl(214, 32%, 91%);          /* #E2E8F0 */
+  --input: hsl(214, 32%, 91%);           /* #E2E8F0 */
+  --ring: hsl(262, 83%, 58%);            /* #4F46E5 */
+  --chart-1: hsl(262, 83%, 58%);         /* #4F46E5 */
+  --chart-2: hsl(173, 58%, 39%);         /* #10B981 */
+  --chart-3: hsl(43, 74%, 66%);          /* #F59E0B */
+  --chart-4: hsl(27, 87%, 67%);          /* #FB923C */
+  --chart-5: hsl(340, 75%, 51%);         /* #F43F5E */
+  --sidebar: hsl(0, 0%, 98%);            /* #FAFAFA */
+  --sidebar-foreground: hsl(222, 84%, 5%); /* #020817 */
+  --sidebar-primary: hsl(262, 83%, 58%);    /* #4F46E5 */
+  --sidebar-primary-foreground: hsl(210, 40%, 98%); /* #F8FAFC */
+  --sidebar-accent: hsl(214, 32%, 91%);     /* #E2E8F0 */
+  --sidebar-accent-foreground: hsl(222, 84%, 5%); /* #020817 */
+  --sidebar-border: hsl(214, 32%, 91%);     /* #E2E8F0 */
+  --sidebar-ring: hsl(262, 83%, 58%);       /* #4F46E5 */
+  --success: hsl(142, 76%, 36%);         /* #10B981 */
+  --warning: hsl(43, 96%, 56%);          /* #F59E0B */
+  --danger: hsl(348, 83%, 47%);          /* #F43F5E */
+}
+
 /* Override legacy light/dark modes with data-theme */
 html[data-theme="midnight"],
+html[data-theme="light"],
 html[data-theme="flower"], 
 html[data-theme="cozy"],
 html[data-theme="high-contrast"] {
@@ -110,6 +150,11 @@ html[data-theme="flower"] body {
 }
 
 html[data-theme="cozy"] body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+html[data-theme="light"] body {
   background: hsl(var(--background));
   color: hsl(var(--foreground));
 }
@@ -141,6 +186,15 @@ html[data-theme="high-contrast"] {
   font-weight: 500; /* Slightly bolder for accessibility */
 }
 
+/* Enhanced dropdown transparency for all themes */
+html[data-theme] .bg-card\/95 {
+  background: hsla(var(--card) / 0.95) !important;
+}
+
+html[data-theme] .backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
 /* Force theme colors over legacy classes */
 html[data-theme] .light,
 html[data-theme] .dark,
@@ -148,6 +202,14 @@ html[data-theme] .bg-background,
 html[data-theme] .text-foreground {
   background: hsl(var(--background)) !important;
   color: hsl(var(--foreground)) !important;
+}
+
+/* Fix select dropdown transparency across themes */
+html[data-theme] [data-radix-popper-content-wrapper] {
+  background: hsla(var(--card) / 0.95) !important;
+  backdrop-filter: blur(8px);
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 /* Cozy Mode - Warm and easy on the eyes */

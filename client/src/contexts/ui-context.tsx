@@ -26,13 +26,42 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const setCurrentTheme = (theme: string) => {
     setCurrentThemeState(theme);
     localStorage.setItem("appTheme", theme);
-    document.documentElement.setAttribute("data-theme", theme);
+    
+    if (theme === "system") {
+      const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.setAttribute("data-theme", isDark ? "midnight" : "light");
+    } else {
+      document.documentElement.setAttribute("data-theme", theme);
+    }
   };
 
-  // Initialize theme on mount
+  // Initialize and handle theme changes
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", currentTheme);
-  }, []);
+    if (currentTheme === "system") {
+      const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.setAttribute("data-theme", isDark ? "midnight" : "light");
+      
+      // Listen for system theme changes
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const handleChange = (e: MediaQueryListEvent) => {
+        document.documentElement.setAttribute("data-theme", e.matches ? "midnight" : "light");
+      };
+      
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    } else {
+      document.documentElement.setAttribute("data-theme", currentTheme);
+    }
+  }, [currentTheme]);
+
+  // Auto-set beginner mode for flower theme
+  useEffect(() => {
+    if (currentTheme === "flower") {
+      setBeginnerMode(true);
+    } else if ((currentTheme === "midnight" || currentTheme === "light") && beginnerMode) {
+      setBeginnerMode(false);
+    }
+  }, [currentTheme, beginnerMode]);
 
   return (
     <UIContext.Provider value={{ 
@@ -58,8 +87,10 @@ export const useUI = () => {
 
 // Theme options
 export const THEMES = [
-  { id: "midnight", label: "Midnight", emoji: "🌙" },
-  { id: "flower", label: "Flower Mode", emoji: "🌸" },
-  { id: "cozy", label: "Cozy", emoji: "☕" },
-  { id: "high-contrast", label: "High Contrast", emoji: "♿" },
+  { id: "midnight", label: "Professional Dark", emoji: "🌙", description: "Dark professional theme" },
+  { id: "light", label: "Professional Light", emoji: "☀️", description: "Clean light theme" },
+  { id: "flower", label: "Flower Mode", emoji: "🌸", description: "Warm & welcoming for beginners" },
+  { id: "cozy", label: "Cozy", emoji: "☕", description: "Warm earth tones" },
+  { id: "high-contrast", label: "High Contrast", emoji: "♿", description: "Enhanced accessibility" },
+  { id: "system", label: "Follow System", emoji: "💻", description: "Match device preference" },
 ] as const;

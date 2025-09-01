@@ -11,16 +11,19 @@ export function ThemeSwitcher() {
         <SelectTrigger className="w-48 bg-card border-border" data-testid="select-theme">
           <SelectValue placeholder="Select theme" />
         </SelectTrigger>
-        <SelectContent className="bg-card border-border">
+        <SelectContent className="bg-card/95 backdrop-blur-sm border-border shadow-lg">
           {THEMES.map((theme) => (
             <SelectItem 
               key={theme.id} 
               value={theme.id}
               className="hover:bg-accent hover:text-accent-foreground cursor-pointer"
             >
-              <div className="flex items-center gap-2">
-                <span>{theme.emoji}</span>
-                <span>{theme.label}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-lg">{theme.emoji}</span>
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">{theme.label}</span>
+                  <span className="text-xs text-muted-foreground">{theme.description}</span>
+                </div>
               </div>
             </SelectItem>
           ))}

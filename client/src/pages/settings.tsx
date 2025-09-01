@@ -25,7 +25,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useTheme } from "next-themes";
 import { useUI } from "@/contexts/ui-context";
 import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 import { 
@@ -38,9 +37,6 @@ import {
   Trash2,
   Save,
   AlertTriangle,
-  Moon,
-  Sun,
-  Monitor,
   Mail,
   Lock,
   Sparkles
@@ -67,7 +63,6 @@ interface UserSettings {
 
 export default function Settings() {
   const { user, updateSettings, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
   const { beginnerMode, setBeginnerMode } = useUI();
   const { toast } = useToast();
   
@@ -123,10 +118,6 @@ export default function Settings() {
     }
   };
 
-  const handleThemeChange = (newTheme: string) => {
-    setTheme(newTheme);
-    setSettings({ ...settings, theme: newTheme as any });
-  };
 
   const handleRiskWeightChange = (category: keyof typeof settings.riskWeights, value: number[]) => {
     setSettings({
@@ -231,38 +222,6 @@ export default function Settings() {
           </CardHeader>
           <CardContent className="space-y-6">
             <ThemeSwitcher />
-            
-            <div className="space-y-2">
-              <Label>Legacy Theme Mode</Label>
-              <Select value={theme} onValueChange={handleThemeChange}>
-                <SelectTrigger data-testid="select-legacy-theme">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="light">
-                    <div className="flex items-center space-x-2">
-                      <Sun className="w-4 h-4" />
-                      <span>Light</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="dark">
-                    <div className="flex items-center space-x-2">
-                      <Moon className="w-4 h-4" />
-                      <span>Dark</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="system">
-                    <div className="flex items-center space-x-2">
-                      <Monitor className="w-4 h-4" />
-                      <span>System</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Note: Legacy mode is overridden by the theme selector above
-              </p>
-            </div>
 
             <div className="flex items-center justify-between">
               <div>
