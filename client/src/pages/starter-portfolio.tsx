@@ -80,7 +80,7 @@ const POPULAR_EXCLUSIONS = [
 
 export default function StarterPortfolio() {
   const { toast } = useToast();
-  const { beginnerMode, currentTheme } = useUI();
+  const { beginnerMode, setBeginnerMode, currentTheme, setCurrentTheme } = useUI();
   const [currentStep, setCurrentStep] = useState<"intake" | "preview" | "saved">("intake");
   const [generatedPortfolio, setGeneratedPortfolio] = useState<any>(null);
   const [portfolioName, setPortfolioName] = useState("");
