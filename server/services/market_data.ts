@@ -321,6 +321,204 @@ class CoinMarketCapProvider implements MarketDataProvider {
   }
 }
 
+// Crypto.com Exchange Provider (Public API)
+class CryptoComProvider implements MarketDataProvider {
+  name = "Crypto.com Exchange";
+  private client = new HttpClient();
+  private config: ProviderConfig = {
+    baseUrl: "https://api.crypto.com/exchange/v1",
+    rateLimit: 100, // 100 requests per second per method
+    timeout: 30000,
+    maxRetries: 3,
+  };
+  
+  private buildUrl(endpoint: string): string {
+    return `${this.config.baseUrl}/${endpoint}`;
+  }
+  
+  // Map Crypto.com instrument names to CoinGecko IDs (simplified mapping)
+  private mapInstrumentToCoinId(instrumentName: string): string {
+    const mapping: Record<string, string> = {
+      "BTC_USD": "bitcoin",
+      "ETH_USD": "ethereum",
+      "ADA_USD": "cardano",
+      "DOT_USD": "polkadot",
+      "LINK_USD": "chainlink",
+      "XRP_USD": "ripple",
+      "LTC_USD": "litecoin",
+      "BCH_USD": "bitcoin-cash",
+      "XLM_USD": "stellar",
+      "ALGO_USD": "algorand",
+      "ATOM_USD": "cosmos",
+      "SOL_USD": "solana",
+      "AVAX_USD": "avalanche-2",
+      "MATIC_USD": "matic-network",
+      "UNI_USD": "uniswap",
+      "AAVE_USD": "aave",
+      "COMP_USD": "compound-governance-token",
+      "MKR_USD": "maker",
+    };
+    return mapping[instrumentName] || instrumentName.toLowerCase().replace("_usd", "");
+  }
+  
+  private mapCoinIdToInstrument(coinId: string): string {
+    const reverseMapping: Record<string, string> = {
+      "bitcoin": "BTC_USD",
+      "ethereum": "ETH_USD",
+      "cardano": "ADA_USD",
+      "polkadot": "DOT_USD",
+      "chainlink": "LINK_USD",
+      "ripple": "XRP_USD",
+      "litecoin": "LTC_USD",
+      "bitcoin-cash": "BCH_USD",
+      "stellar": "XLM_USD",
+      "algorand": "ALGO_USD",
+      "cosmos": "ATOM_USD",
+      "solana": "SOL_USD",
+      "avalanche-2": "AVAX_USD",
+      "matic-network": "MATIC_USD",
+      "uniswap": "UNI_USD",
+      "aave": "AAVE_USD",
+      "compound-governance-token": "COMP_USD",
+      "maker": "MKR_USD",
+    };
+    return reverseMapping[coinId] || `${coinId.toUpperCase()}_USD`;
+  }
+  
+  async search(query: string, limit: number = 20): Promise<CoinSummary[]> {
+    // Get list of available instruments
+    const url = this.buildUrl("public/get-instruments");
+    const response = await this.client.fetchWithRetry(url, {}, this.config);
+    const data = await response.json();
+    
+    if (!data.result?.data) return [];
+    
+    // Filter instruments by query and convert to CoinSummary format
+    const instruments = data.result.data.filter((instrument: any) => 
+      instrument.instrument_name?.toLowerCase().includes(query.toLowerCase()) ||
+      instrument.base_currency?.toLowerCase().includes(query.toLowerCase())
+    );
+    
+    return instruments.slice(0, limit).map((instrument: any) => ({
+      id: this.mapInstrumentToCoinId(instrument.instrument_name),
+      symbol: instrument.base_currency?.toLowerCase(),
+      name: instrument.base_currency,
+      image: "",
+      market_cap_rank: null,
+    }));
+  }
+  
+  async markets(vsCurrency: string = "usd", page: number = 1, perPage: number = 100): Promise<MarketRow[]> {
+    const url = this.buildUrl("public/get-tickers");
+    const response = await this.client.fetchWithRetry(url, {}, this.config);
+    const data = await response.json();
+    
+    if (!data.result?.data) return [];
+    
+    // Filter USD pairs and convert to MarketRow format
+    const usdPairs = data.result.data.filter((ticker: any) => 
+      ticker.i?.endsWith("_USD") || ticker.i?.endsWith("_USDT") || ticker.i?.endsWith("_USDC")
+    );
+    
+    const startIndex = (page - 1) * perPage;
+    const paginatedPairs = usdPairs.slice(startIndex, startIndex + perPage);
+    
+    return paginatedPairs.map((ticker: any, index: number) => ({
+      id: this.mapInstrumentToCoinId(ticker.i),
+      symbol: ticker.i?.split("_")[0]?.toLowerCase() || "",
+      name: ticker.i?.split("_")[0] || "",
+      image: "",
+      current_price: parseFloat(ticker.a) || 0, // Last price
+      market_cap: 0, // Not available in tickers endpoint
+      market_cap_rank: startIndex + index + 1,
+      price_change_percentage_24h: parseFloat(ticker.dc) || 0, // 24h change percentage
+      total_volume: parseFloat(ticker.v) || 0, // 24h volume
+    }));
+  }
+  
+  async coin(coinId: string): Promise<CoinDetail> {
+    const instrumentName = this.mapCoinIdToInstrument(coinId);
+    
+    // Get ticker data for the specific instrument
+    const tickerUrl = this.buildUrl("public/get-tickers");
+    const tickerResponse = await this.client.fetchWithRetry(tickerUrl, {}, this.config);
+    const tickerData = await tickerResponse.json();
+    
+    if (!tickerData.result?.data) {
+      throw new Error(`Instrument ${instrumentName} not found on Crypto.com`);
+    }
+    
+    const ticker = tickerData.result.data.find((t: any) => t.i === instrumentName);
+    if (!ticker) {
+      throw new Error(`Ticker for ${instrumentName} not found`);
+    }
+    
+    return {
+      id: coinId,
+      symbol: instrumentName.split("_")[0]?.toLowerCase() || "",
+      name: instrumentName.split("_")[0] || "",
+      description: "",
+      image: "",
+      current_price: parseFloat(ticker.a) || 0,
+      market_cap: 0, // Not available
+      market_cap_rank: 0, // Not available
+      total_volume: parseFloat(ticker.v) || 0,
+      price_change_percentage_24h: parseFloat(ticker.dc) || 0,
+      price_change_percentage_7d: 0, // Not available
+      price_change_percentage_30d: 0, // Not available
+      total_supply: undefined,
+      max_supply: undefined,
+      circulating_supply: undefined,
+    };
+  }
+  
+  async history(coinId: string, vsCurrency: string = "usd", days: number | string = 30): Promise<PriceHistory> {
+    const instrumentName = this.mapCoinIdToInstrument(coinId);
+    
+    // Determine timeframe based on days
+    let timeframe = "1D";
+    if (typeof days === "number") {
+      if (days <= 7) timeframe = "1h";
+      else if (days <= 30) timeframe = "4h";
+      else timeframe = "1D";
+    }
+    
+    const url = this.buildUrl(`public/get-candlestick?instrument_name=${instrumentName}&timeframe=${timeframe}`);
+    const response = await this.client.fetchWithRetry(url, {}, this.config);
+    const data = await response.json();
+    
+    if (!data.result?.data) return { prices: [], market_caps: [], total_volumes: [] };
+    
+    // Convert OHLCV data to price history format
+    const prices = data.result.data.map((candle: any) => [
+      parseInt(candle.t), // timestamp
+      parseFloat(candle.c) // close price
+    ]);
+    
+    const volumes = data.result.data.map((candle: any) => [
+      parseInt(candle.t), // timestamp
+      parseFloat(candle.v) // volume
+    ]);
+    
+    return {
+      prices,
+      market_caps: [], // Not available
+      total_volumes: volumes,
+    };
+  }
+  
+  async isHealthy(): Promise<boolean> {
+    try {
+      const url = this.buildUrl("public/get-instruments");
+      const response = await this.client.fetchWithRetry(url, {}, { ...this.config, timeout: 5000 });
+      const data = await response.json();
+      return response.ok && data.code === 0; // Crypto.com returns code: 0 for success
+    } catch {
+      return false;
+    }
+  }
+}
+
 // Messari Provider (Research Data)
 class MessariProvider implements MarketDataProvider {
   name = "Messari";
@@ -448,6 +646,7 @@ class MarketDataService {
     // Initialize providers in order of preference
     this.providers = [
       new CoinGeckoProvider(),
+      new CryptoComProvider(),
       new CoinMarketCapProvider(),
       new MessariProvider(),
     ];
